@@ -1,12 +1,7 @@
-name: Database Seeding Pipeline
+name: Database Seeding Pipeline (Free Tier)
 
 on:
-  workflow_dispatch:  # Manual trigger
-  push:
-    branches: [ master ]
-    paths:
-      - 'scripts/**'
-      - '.github/workflows/database-seeding.yml'
+  workflow_dispatch:  # Manual trigger only - uses free GitHub Actions minutes
 
 env:
   FLUTTER_VERSION: '3.19.5'
@@ -53,22 +48,8 @@ jobs:
         echo "- 14 Vehicle Controls questions"
         echo "- Total: 80 Evolve Academy questions"
 
-    - name: Send success notification
+    - name: Success message
       if: success()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ job.status }}
-        channel: '#database'
-        username: 'Database Seeding Bot'
-        icon_emoji: ':database:'
-        text: '✅ Database seeded successfully with 80 Evolve Academy questions!'
-
-    - name: Send failure notification
-      if: failure()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ job.status }}
-        channel: '#database'
-        username: 'Database Seeding Bot'
-        icon_emoji: ':warning:'
-        text: '❌ Database seeding failed! Check the workflow logs.'
+      run: |
+        echo "✅ Database seeded successfully with 80 Evolve Academy questions!"
+        echo "This workflow used free GitHub Actions minutes"
