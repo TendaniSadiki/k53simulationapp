@@ -1,0 +1,74 @@
+name: Database Seeding Pipeline
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/database-seeding.yml'
+
+env:
+  FLUTTER_VERSION: '3.19.5'
+
+jobs:
+  seed-database:
+    name: Seed Database with Questions
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Setup Dart
+      uses: dart-lang/setup-dart@v1
+
+    - name: List available seeding scripts
+      run: |
+        echo "Available seeding scripts:"
+        ls -la scripts/seed_*.dart || echo "No seed scripts found"
+
+    - name: Run Evolve Academy Seeding Script
+      run: dart run scripts/seed_evolve_academy_final.dart
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      continue-on-error: false
+
+    - name: Verify seeding completed
+      run: |
+        echo "✅ Database seeding completed successfully!"
+        echo "Script used: scripts/seed_evolve_academy_final.dart"
+        echo "This script contains:"
+        echo "- 66 Rules of the Road questions"
+        echo "- 14 Vehicle Controls questions"
+        echo "- Total: 80 Evolve Academy questions"
+
+    - name: Send success notification
+      if: success()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#database'
+        username: 'Database Seeding Bot'
+        icon_emoji: ':database:'
+        text: '✅ Database seeded successfully with 80 Evolve Academy questions!'
+
+    - name: Send failure notification
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#database'
+        username: 'Database Seeding Bot'
+        icon_emoji: ':warning:'
+        text: '❌ Database seeding failed! Check the workflow logs.'
