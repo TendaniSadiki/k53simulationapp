@@ -3,7 +3,7 @@ name: Database Seeding Pipeline
 on:
   workflow_dispatch:  # Manual trigger
   push:
-    branches: [ main ]
+    branches: [ master ]
     paths:
       - 'scripts/**'
       - '.github/workflows/database-seeding.yml'
