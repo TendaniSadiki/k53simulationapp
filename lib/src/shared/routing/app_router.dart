@@ -13,6 +13,7 @@ import '../../features/exam/presentation/screens/exam_screen.dart';
 import '../../features/exam/presentation/screens/exam_results_screen.dart';
 import '../../features/exam/presentation/screens/exam_review_screen.dart';
 import '../../features/exam/presentation/screens/mock_exam_selection_screen.dart';
+import '../../features/info/presentation/screens/test_requirements_screen.dart';
 import '../../core/services/supabase_service.dart';
 
 class AppRouter {
@@ -55,7 +56,7 @@ class AppRouter {
                   .select('role')
                   .eq('id', user.id)
                   .single()
-                  .catchError((_) => null);
+                  .catchError((_) => <String, dynamic>{});
 
               if (profile == null || (profile['role'] as String?) != 'admin') {
                 print('Admin route protection: User is not admin, redirecting to dashboard');
@@ -78,7 +79,7 @@ class AppRouter {
                 .select('role')
                 .eq('id', user.id)
                 .single()
-                .catchError((_) => null);
+                .catchError((_) => <String, dynamic>{});
 
             if (profile != null && (profile['role'] as String?) == 'admin') {
               print('Admin user at root, redirecting to admin dashboard');
@@ -178,6 +179,14 @@ class AppRouter {
           pageBuilder: (context, state) => MaterialPage(
             key: state.pageKey,
             child: const AdminTestScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/info/requirements',
+          name: 'test-requirements',
+          pageBuilder: (context, state) => MaterialPage(
+            key: state.pageKey,
+            child: const TestRequirementsScreen(),
           ),
         ),
         GoRoute(

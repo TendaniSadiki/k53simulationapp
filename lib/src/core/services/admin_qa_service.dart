@@ -44,7 +44,7 @@ class AdminQAService {
             .select()
             .eq('id', questionId)
             .single()
-            .catchError((_) => null);
+            .catchError((_) => <String, dynamic>{});
 
         // Get report count
         final reports = await _client
@@ -59,7 +59,7 @@ class AdminQAService {
             .select()
             .eq('question_id', questionId)
             .single()
-            .catchError((_) => null);
+            .catchError((_) => <String, dynamic>{});
 
         results.add({
           ...flag,
