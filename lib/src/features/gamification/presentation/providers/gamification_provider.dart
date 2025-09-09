@@ -117,6 +117,44 @@ class GamificationNotifier extends StateNotifier<GamificationState> {
       await loadUserStats();
     } catch (e) {
       print('Error tracking exam session: $e');
+      // Track offline activity as fallback
+      await _trackOfflineActivity(
+        activityType: 'exam_session',
+        value: 1,
+        metadata: {
+          'correct_answers': correctAnswers,
+          'total_questions': totalQuestions,
+          'category': category,
+          'passed': passed,
+        },
+      );
+    }
+  }
+
+  // Track offline activity when online tracking fails
+  Future<void> _trackOfflineActivity({
+    required String activityType,
+    required int value,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      await GamificationService().trackOfflineActivity(
+        activityType: activityType,
+        value: value,
+        metadata: metadata,
+      );
+    } catch (e) {
+      print('Error tracking offline activity: $e');
+    }
+  }
+
+  // Sync offline gamification data
+  Future<void> syncOfflineData() async {
+    try {
+      await GamificationService().syncOfflineGamificationData();
+      await loadUserStats();
+    } catch (e) {
+      print('Error syncing offline gamification data: $e');
     }
   }
 }

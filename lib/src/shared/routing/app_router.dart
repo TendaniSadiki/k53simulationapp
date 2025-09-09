@@ -5,6 +5,7 @@ import '../../features/accessibility_test/presentation/screens/accessibility_tes
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin_auth/presentation/screens/admin_login_screen.dart';
 import '../../features/admin_auth/presentation/screens/admin_test_screen.dart';
+import '../../features/offline_test/presentation/screens/offline_test_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -13,6 +14,8 @@ import '../../features/exam/presentation/screens/exam_screen.dart';
 import '../../features/exam/presentation/screens/exam_results_screen.dart';
 import '../../features/exam/presentation/screens/exam_review_screen.dart';
 import '../../features/exam/presentation/screens/mock_exam_selection_screen.dart';
+import '../../features/info/presentation/screens/test_requirements_screen.dart';
+import '../../features/gamification/presentation/screens/achievements_screen.dart';
 import '../../core/services/supabase_service.dart';
 
 class AppRouter {
@@ -55,7 +58,7 @@ class AppRouter {
                   .select('role')
                   .eq('id', user.id)
                   .single()
-                  .catchError((_) => null);
+                  .catchError((_) => <String, dynamic>{});
 
               if (profile == null || (profile['role'] as String?) != 'admin') {
                 print('Admin route protection: User is not admin, redirecting to dashboard');
@@ -78,7 +81,7 @@ class AppRouter {
                 .select('role')
                 .eq('id', user.id)
                 .single()
-                .catchError((_) => null);
+                .catchError((_) => <String, dynamic>{});
 
             if (profile != null && (profile['role'] as String?) == 'admin') {
               print('Admin user at root, redirecting to admin dashboard');
@@ -178,6 +181,30 @@ class AppRouter {
           pageBuilder: (context, state) => MaterialPage(
             key: state.pageKey,
             child: const AdminTestScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/offline-test',
+          name: 'offline-test',
+          pageBuilder: (context, state) => MaterialPage(
+            key: state.pageKey,
+            child: const OfflineTestScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/info/requirements',
+          name: 'test-requirements',
+          pageBuilder: (context, state) => MaterialPage(
+            key: state.pageKey,
+            child: const TestRequirementsScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/achievements',
+          name: 'achievements',
+          pageBuilder: (context, state) => MaterialPage(
+            key: state.pageKey,
+            child: const AchievementsScreen(),
           ),
         ),
         GoRoute(

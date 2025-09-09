@@ -38,7 +38,7 @@ class _AdminTestScreenState extends ConsumerState<AdminTestScreen> {
           .single()
           .catchError((e) {
         setState(() => _status = 'Error fetching profile: $e');
-        return null;
+        return <String, dynamic>{};
       });
 
       if (profile == null) {

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/question.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/database_service.dart';
+import '../../../../core/services/offline_database_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/study_timer_service.dart';
 import '../../../../core/services/session_persistence_service.dart';
@@ -105,7 +106,7 @@ class StudyNotifier extends StateNotifier<StudyState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final questions = await DatabaseService.getRandomQuestions(
+      final questions = await OfflineDatabaseService.getRandomQuestions(
         count: limit,
         category: category,
         learnerCode: learnerCode,
@@ -270,7 +271,8 @@ class StudyNotifier extends StateNotifier<StudyState> {
     if (state.sessionId == null || state.currentQuestion == null) return;
 
     try {
-      await DatabaseService.recordAnswer(
+      // Use offline database service which handles both online and offline scenarios
+      await OfflineDatabaseService.recordAnswer(
         sessionId: state.sessionId!,
         questionId: state.currentQuestion!.id,
         chosenIndex: answerIndex,

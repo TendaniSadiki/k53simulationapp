@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/supabase_service.dart';
-import '../../../gamification/presentation/widgets/gamification_progress_widget.dart';
-import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../referral/presentation/widgets/referral_widget.dart';
+import '../../../../shared/widgets/connectivity_indicator.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -17,6 +16,8 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          const ConnectivityIndicator(),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -60,11 +61,6 @@ class DashboardScreen extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            // Gamification progress
-            const GamificationProgressWidget(),
-
-            const SizedBox(height: 16),
-
             // Referral program
             const ReferralWidget(),
 
@@ -83,10 +79,10 @@ class DashboardScreen extends ConsumerWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.5,
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.2,
               ),
               children: [
                 _buildActionCard(
@@ -131,6 +127,22 @@ class DashboardScreen extends ConsumerWidget {
                   },
                   color: Colors.purple,
                 ),
+                _buildActionCard(
+                  context,
+                  icon: Icons.info,
+                  title: 'Test Info',
+                  subtitle: 'Requirements & tips',
+                  onTap: () => context.go('/info/requirements'),
+                  color: Colors.teal,
+                ),
+                _buildActionCard(
+                  context,
+                  icon: Icons.emoji_events,
+                  title: 'Achievements',
+                  subtitle: 'View your progress',
+                  onTap: () => context.go('/achievements'),
+                  color: Colors.pink,
+                ),
               ],
             ),
           ],
@@ -156,21 +168,26 @@ class DashboardScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
+              Icon(icon, size: 28, color: color),
+              const SizedBox(height: 6),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import '../models/achievement.dart';
 import './database_service.dart';
 import './supabase_service.dart';
+import './offline_database_service.dart';
 
 class GamificationService {
   static final GamificationService _instance = GamificationService._internal();
@@ -202,6 +203,12 @@ class GamificationService {
     if (userId == null) return {'points': 0, 'level': 1};
 
     try {
+      // Try to get stats from offline database first
+      final offlineStats = await OfflineDatabaseService.getGamificationStats(userId);
+      if (offlineStats.isNotEmpty) {
+        return offlineStats;
+      }
+
       final userAchievements = await getUserAchievements();
       final unlockedAchievements = userAchievements.where((ua) => ua.unlocked);
       
@@ -217,14 +224,30 @@ class GamificationService {
       
       final level = _calculateLevel(totalPoints);
       
-      return {
+      final stats = {
         'points': totalPoints,
         'level': level,
         'next_level_points': _pointsForLevel(level + 1),
         'unlocked_achievements': unlockedAchievements.length,
       };
+      
+      // Cache stats in offline database
+      await OfflineDatabaseService.saveGamificationStats(userId, stats);
+      
+      return stats;
     } catch (e) {
       print('Error getting user stats: $e');
+      // Try to get from offline database as fallback
+      try {
+        if (userId != null) {
+          final offlineStats = await OfflineDatabaseService.getGamificationStats(userId);
+          if (offlineStats.isNotEmpty) {
+            return offlineStats;
+          }
+        }
+      } catch (offlineError) {
+        print('Error getting offline stats: $offlineError');
+      }
       return {'points': 0, 'level': 1, 'unlocked_achievements': 0};
     }
   }
@@ -244,5 +267,82 @@ class GamificationService {
 
   int _pointsForLevel(int level) {
     return level * (level + 1) * 50; // Quadratic progression
+  }
+
+  // Get all achievements from database
+  Future<List<Achievement>> getAllAchievements() async {
+    try {
+      // Get achievements by each type and combine them
+      final allAchievements = <Achievement>[];
+      
+      for (final type in AchievementType.values) {
+        final achievements = await DatabaseService.getAchievementsByType(type);
+        allAchievements.addAll(achievements);
+      }
+      
+      return allAchievements;
+    } catch (e) {
+      print('Error getting all achievements: $e');
+      return [];
+    }
+  }
+
+  // Track offline activity for gamification
+  Future<void> trackOfflineActivity({
+    required String activityType,
+    required int value,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) return;
+
+    try {
+      await OfflineDatabaseService.trackOfflineActivity(
+        userId: userId,
+        activityType: activityType,
+        value: value,
+        metadata: metadata,
+      );
+    } catch (e) {
+      print('Error tracking offline activity: $e');
+    }
+  }
+
+  // Sync offline gamification data when online
+  Future<void> syncOfflineGamificationData() async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) return;
+
+    try {
+      final offlineActivities = await OfflineDatabaseService.getPendingOfflineActivities(userId);
+      
+      for (final activity in offlineActivities) {
+        switch (activity['activity_type']) {
+          case 'study_session':
+            await trackStudySessionComplete(
+              correctAnswers: activity['metadata']['correct_answers'] ?? 0,
+              totalQuestions: activity['metadata']['total_questions'] ?? 0,
+              category: activity['metadata']['category'] ?? '',
+            );
+            break;
+          case 'exam_session':
+            await trackExamSessionComplete(
+              correctAnswers: activity['metadata']['correct_answers'] ?? 0,
+              totalQuestions: activity['metadata']['total_questions'] ?? 0,
+              category: activity['metadata']['category'] ?? '',
+              passed: activity['metadata']['passed'] ?? false,
+            );
+            break;
+          case 'daily_login':
+            await trackDailyLogin();
+            break;
+        }
+        
+        // Mark activity as synced
+        await OfflineDatabaseService.markActivityAsSynced(activity['id']);
+      }
+    } catch (e) {
+      print('Error syncing offline gamification data: $e');
+    }
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:ui' as ui;
 import './config/environment_config.dart';
 import './services/supabase_service.dart';
+import './services/offline_database_service.dart';
+import './services/offline_data_preloader.dart';
 
 class AppInitializer {
   static Future<void> initialize() async {
@@ -14,10 +16,18 @@ class AppInitializer {
     // Initialize Supabase
     await SupabaseService.initialize();
 
+    // Initialize offline database
+    await OfflineDatabaseService.initialize();
+
+    // Start connectivity listener for auto-sync
+    OfflineDatabaseService.startConnectivityListener();
+
+    // Preload basic questions for offline use
+    await OfflineDataPreloader.preloadQuestions();
+
     // Additional initialization can be added here:
     // - Analytics
     // - Crash reporting
-    // - Local database
     // - Caching
     // - etc.
   }

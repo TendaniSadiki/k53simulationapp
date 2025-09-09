@@ -60,6 +60,12 @@ dependencies:
   connectivity_plus: ^5.0.2
   package_info_plus: ^8.3.1
   device_info_plus: ^10.0.0
+  
+  # Offline Database
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  sqflite: ^2.3.0
+  path: ^1.8.3
 
   # Edge Function Dependencies
   deno_postgres_interop: ^0.0.4
@@ -94,9 +100,6 @@ flutter:
 
   # Assets
   assets:
-    - assets/images/
-    - assets/icons/
-    - assets/svgs/
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
