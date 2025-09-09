@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/exam_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../shared/widgets/connectivity_indicator.dart';
 
 class ExamScreen extends ConsumerStatefulWidget {
   const ExamScreen({super.key});
@@ -165,6 +166,8 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       appBar: AppBar(
         title: const Text('Mock Exam'),
         actions: [
+          const ConnectivityIndicator(),
+          const SizedBox(width: 8),
           IconButton(
             icon: Icon(state.isPaused ? Icons.play_arrow : Icons.pause),
             onPressed: () => ref.read(examProvider.notifier).togglePause(),

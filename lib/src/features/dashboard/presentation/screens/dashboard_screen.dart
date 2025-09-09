@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../referral/presentation/widgets/referral_widget.dart';
+import '../../../../shared/widgets/connectivity_indicator.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -15,6 +16,8 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          const ConnectivityIndicator(),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -131,6 +134,14 @@ class DashboardScreen extends ConsumerWidget {
                   subtitle: 'Requirements & tips',
                   onTap: () => context.go('/info/requirements'),
                   color: Colors.teal,
+                ),
+                _buildActionCard(
+                  context,
+                  icon: Icons.emoji_events,
+                  title: 'Achievements',
+                  subtitle: 'View your progress',
+                  onTap: () => context.go('/achievements'),
+                  color: Colors.pink,
                 ),
               ],
             ),

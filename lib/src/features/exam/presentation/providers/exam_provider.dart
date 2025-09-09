@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/question.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/database_service.dart';
+import '../../../../core/services/offline_database_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/exam_timer_service.dart';
 import '../../../../core/services/session_persistence_service.dart';
@@ -145,7 +146,7 @@ class ExamNotifier extends StateNotifier<ExamState> {
     final examDurationSeconds = (questionCount * 90).clamp(300, 7200); // Min 5 minutes, max 120 minutes
 
     try {
-      final questions = await DatabaseService.getRandomQuestions(
+      final questions = await OfflineDatabaseService.getRandomQuestions(
         count: questionCount,
         category: category,
         learnerCode: learnerCode,
@@ -256,7 +257,7 @@ class ExamNotifier extends StateNotifier<ExamState> {
     if (state.sessionId == null || state.currentQuestion == null) return;
 
     try {
-      await DatabaseService.recordAnswer(
+      await OfflineDatabaseService.recordAnswer(
         sessionId: state.sessionId!,
         questionId: state.currentQuestion!.id,
         chosenIndex: answerIndex,

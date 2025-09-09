@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/exam_provider.dart';
 import '../../../../core/models/question.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../shared/widgets/connectivity_indicator.dart';
 
 class ExamReviewScreen extends ConsumerStatefulWidget {
   const ExamReviewScreen({super.key});
@@ -278,6 +279,10 @@ class _ExamReviewScreenState extends ConsumerState<ExamReviewScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
+        actions: const [
+          ConnectivityIndicator(),
+          SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [

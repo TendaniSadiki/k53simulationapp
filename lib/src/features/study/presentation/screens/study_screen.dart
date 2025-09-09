@@ -4,6 +4,7 @@ import '../../../../core/models/question.dart';
 import '../../../../core/services/qa_service.dart';
 import '../providers/study_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
+import '../../../../shared/widgets/connectivity_indicator.dart';
 
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key});
@@ -417,6 +418,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       appBar: AppBar(
         title: const Text('Study Mode'),
         actions: [
+          const ConnectivityIndicator(),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {

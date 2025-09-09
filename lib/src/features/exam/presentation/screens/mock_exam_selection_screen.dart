@@ -5,6 +5,7 @@ import '../providers/exam_provider.dart';
 import '../../data/mock_exam_config.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../shared/widgets/connectivity_indicator.dart';
 
 class MockExamSelectionScreen extends ConsumerWidget {
   const MockExamSelectionScreen({super.key});
@@ -70,6 +71,10 @@ class MockExamSelectionScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/dashboard'),
         ),
+        actions: const [
+          ConnectivityIndicator(),
+          SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

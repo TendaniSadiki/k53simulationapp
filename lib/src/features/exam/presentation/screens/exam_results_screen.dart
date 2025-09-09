@@ -6,6 +6,7 @@ import '../../../gamification/presentation/providers/gamification_provider.dart'
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/share_service.dart';
 import '../../../../core/models/referral.dart';
+import '../../../../shared/widgets/connectivity_indicator.dart';
 
 class ExamResultsScreen extends ConsumerStatefulWidget {
   const ExamResultsScreen({super.key});
@@ -172,6 +173,10 @@ class _ExamResultsScreenState extends ConsumerState<ExamResultsScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => context.go('/dashboard'),
         ),
+        actions: const [
+          ConnectivityIndicator(),
+          SizedBox(width: 8),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
