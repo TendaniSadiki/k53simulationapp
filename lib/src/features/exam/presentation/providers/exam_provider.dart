@@ -192,6 +192,17 @@ class ExamNotifier extends StateNotifier<ExamState> {
         );
       }
 
+      // Log image requirements for all questions
+      for (final question in questions) {
+        await AnalyticsService.trackImageRequirement(
+          questionId: question.id,
+          questionText: question.questionText,
+          imageUrl: question.imageUrl,
+          category: question.category,
+          learnerCode: question.learnerCode,
+        );
+      }
+
       // Initialize and start the exam timer
       _timerService?.dispose();
       _timerService = ExamTimerService(totalDurationSeconds: examDurationSeconds);

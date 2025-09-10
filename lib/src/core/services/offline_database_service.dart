@@ -4,10 +4,7 @@ import 'package:path/path.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../models/question.dart';
-import '../models/user_profile.dart';
 import '../models/achievement.dart';
-import '../models/referral.dart';
-import './supabase_service.dart';
 import './database_service.dart';
 
 class OfflineDatabaseService {
@@ -74,6 +71,102 @@ class OfflineDatabaseService {
               attempts INTEGER DEFAULT 0
             )
           ''');
+
+          // Create gamification stats table
+          await db.execute('''
+            CREATE TABLE gamification_stats(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id TEXT NOT NULL,
+              points INTEGER DEFAULT 0,
+              level INTEGER DEFAULT 1,
+              next_level_points INTEGER DEFAULT 100,
+              unlocked_achievements INTEGER DEFAULT 0,
+              total_badges INTEGER DEFAULT 0,
+              login_streak INTEGER DEFAULT 0,
+              last_updated TEXT,
+              UNIQUE(user_id)
+            )
+          ''');
+
+          // Create offline activities table
+          await db.execute('''
+            CREATE TABLE offline_activities(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id TEXT NOT NULL,
+              activity_type TEXT NOT NULL,
+              value INTEGER DEFAULT 0,
+              metadata TEXT,
+              created_at TEXT,
+              is_synced INTEGER DEFAULT 0
+            )
+          ''');
+
+          // Create badges table for offline caching
+          await db.execute('''
+            CREATE TABLE badges(
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT,
+              icon TEXT,
+              tier TEXT,
+              category TEXT,
+              target_value INTEGER,
+              is_hidden INTEGER DEFAULT 0,
+              created_at TEXT
+            )
+          ''');
+
+          // Create user badges table
+          await db.execute('''
+            CREATE TABLE user_badges(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id TEXT NOT NULL,
+              badge_id TEXT NOT NULL,
+              progress INTEGER DEFAULT 0,
+              unlocked INTEGER DEFAULT 0,
+              unlocked_at TEXT,
+              created_at TEXT,
+              updated_at TEXT,
+              UNIQUE(user_id, badge_id)
+            )
+          ''');
+
+          // Create achievements table for offline caching
+          await db.execute('''
+            CREATE TABLE achievements(
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              description TEXT,
+              icon TEXT,
+              points INTEGER DEFAULT 0,
+              type TEXT,
+              target_value INTEGER,
+              is_hidden INTEGER DEFAULT 0,
+              created_at TEXT
+            )
+          ''');
+
+          // Create user achievements table
+          await db.execute('''
+            CREATE TABLE user_achievements(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id TEXT NOT NULL,
+              achievement_id TEXT NOT NULL,
+              progress INTEGER DEFAULT 0,
+              unlocked INTEGER DEFAULT 0,
+              unlocked_at TEXT,
+              created_at TEXT,
+              updated_at TEXT,
+              UNIQUE(user_id, achievement_id)
+            )
+          ''');
+
+          // Create indexes for better performance
+          await db.execute('CREATE INDEX idx_gamification_stats_user_id ON gamification_stats(user_id)');
+          await db.execute('CREATE INDEX idx_offline_activities_user_id ON offline_activities(user_id)');
+          await db.execute('CREATE INDEX idx_offline_activities_synced ON offline_activities(is_synced)');
+          await db.execute('CREATE INDEX idx_user_badges_user_id ON user_badges(user_id)');
+          await db.execute('CREATE INDEX idx_user_achievements_user_id ON user_achievements(user_id)');
         },
       );
 
@@ -95,8 +188,23 @@ class OfflineDatabaseService {
     int? learnerCode,
     int limit = 20,
     int offset = 0,
+    bool forceRefresh = false,
   }) async {
     try {
+      // If force refresh is requested and online, fetch from Supabase and update cache
+      if (forceRefresh && await isConnected()) {
+        final onlineQuestions = await DatabaseService.getQuestions(
+          category: category,
+          learnerCode: learnerCode,
+          limit: limit,
+          offset: offset,
+        );
+
+        // Cache the questions
+        await cacheQuestions(onlineQuestions);
+        return onlineQuestions;
+      }
+
       // Try to get from local cache first
       List<Question> localQuestions = await _getQuestionsFromLocal(
         category: category,
@@ -105,7 +213,12 @@ class OfflineDatabaseService {
         offset: offset,
       );
 
+      // If we have local questions, return them immediately for best performance
       if (localQuestions.isNotEmpty) {
+        // In background, check if we should update the cache (if online)
+        if (await isConnected()) {
+          _updateCacheInBackground(category: category, learnerCode: learnerCode);
+        }
         return localQuestions;
       }
 
@@ -138,27 +251,25 @@ class OfflineDatabaseService {
     int? learnerCode,
   }) async {
     try {
-      // Try to get from local cache first
-      List<Question> allQuestions = await _getAllQuestionsFromLocal();
+      // Try to get from local cache first with proper filtering
+      List<Question> filteredQuestions = await _getQuestionsFromLocal(
+        category: category,
+        learnerCode: learnerCode,
+        limit: 100, // Get more questions to ensure we have enough for shuffling
+      );
 
-      // Apply filters
-      if (category != null) {
-        allQuestions = allQuestions.where((q) => q.category == category).toList();
-      }
-      
-      if (learnerCode != null) {
-        allQuestions = allQuestions.where((q) => q.learnerCode == learnerCode).toList();
-      }
-
-      // Filter active questions
-      allQuestions = allQuestions.where((q) => q.isActive).toList();
-
-      if (allQuestions.length >= count) {
-        allQuestions.shuffle();
-        return allQuestions.take(count).toList();
+      // If we have enough questions, shuffle and return
+      if (filteredQuestions.length >= count) {
+        filteredQuestions.shuffle();
+        return filteredQuestions.take(count).toList();
       }
 
-      // If not enough local data and online, fetch from Supabase
+      // If we have some questions but not enough, return what we have
+      if (filteredQuestions.isNotEmpty) {
+        return filteredQuestions;
+      }
+
+      // If no local questions in this category and online, try to fetch and cache
       if (await isConnected()) {
         final onlineQuestions = await DatabaseService.getRandomQuestions(
           count: count,
@@ -166,13 +277,26 @@ class OfflineDatabaseService {
           learnerCode: learnerCode,
         );
 
-        // Cache the questions
-        await cacheQuestions(onlineQuestions);
-
-        return onlineQuestions;
+        if (onlineQuestions.isNotEmpty) {
+          // Cache the questions for future offline use
+          await cacheQuestions(onlineQuestions);
+          return onlineQuestions;
+        }
       }
 
-      return allQuestions;
+      // Fallback: try to get any questions from local cache (remove category filter)
+      if (category != null) {
+        final fallbackQuestions = await _getQuestionsFromLocal(
+          limit: count,
+        );
+        
+        if (fallbackQuestions.isNotEmpty) {
+          fallbackQuestions.shuffle();
+          return fallbackQuestions.take(count).toList();
+        }
+      }
+
+      return [];
     } catch (e) {
       print('Error getting random questions offline: $e');
       return [];
@@ -352,20 +476,6 @@ class OfflineDatabaseService {
     }
   }
 
-  // Get all questions from local database
-  static Future<List<Question>> _getAllQuestionsFromLocal() async {
-    try {
-      final results = await _sqliteDb.query(
-        'questions',
-        where: 'is_active = 1',
-      );
-
-      return results.map((row) => _questionFromLocal(row)).toList();
-    } catch (e) {
-      print('Error getting all questions from local: $e');
-      return [];
-    }
-  }
 
   // Queue sync operation for later
   static Future<void> _queueSyncOperation({
@@ -395,6 +505,31 @@ class OfflineDatabaseService {
           hintsUsed: data['hints_used'] as int,
         );
         break;
+      case 'gamification_stats':
+        await DatabaseService.updateUserStats(
+          userId: data['user_id'] as String,
+          points: data['points'] as int,
+          level: data['level'] as int,
+          unlockedAchievements: data['unlocked_achievements'] as int,
+        );
+        break;
+      case 'offline_activities':
+        await _syncOfflineActivity(data);
+        break;
+      case 'user_achievements':
+        await DatabaseService.updateAchievementProgress(
+          userId: data['user_id'] as String,
+          achievementId: data['achievement_id'] as String,
+          progress: data['progress'] as int,
+        );
+        break;
+      case 'user_badges':
+        await DatabaseService.updateBadgeProgress(
+          userId: data['user_id'] as String,
+          badgeId: data['badge_id'] as String,
+          progress: data['progress'] as int,
+        );
+        break;
       // Add more table sync cases as needed
     }
   }
@@ -407,6 +542,45 @@ class OfflineDatabaseService {
   // Sync delete operations
   static Future<void> _syncDeleteOperation(String tableName, Map<String, dynamic> data) async {
     // Implement delete sync logic for different tables
+  }
+
+  // Sync offline activity to online service
+  static Future<void> _syncOfflineActivity(Map<String, dynamic> data) async {
+    final activityType = data['activity_type'] as String;
+    final value = data['value'] as int;
+    final metadata = data['metadata'] != null
+        ? json.decode(data['metadata'] as String) as Map<String, dynamic>
+        : null;
+
+    switch (activityType) {
+      case 'study_session':
+        await DatabaseService.trackStudySessionComplete(
+          correctAnswers: metadata?['correct_answers'] ?? 0,
+          totalQuestions: metadata?['total_questions'] ?? 0,
+          category: metadata?['category'] ?? '',
+        );
+        break;
+      case 'exam_session':
+        await DatabaseService.trackExamSessionComplete(
+          correctAnswers: metadata?['correct_answers'] ?? 0,
+          totalQuestions: metadata?['total_questions'] ?? 0,
+          category: metadata?['category'] ?? '',
+          passed: metadata?['passed'] ?? false,
+        );
+        break;
+      case 'daily_login':
+        await DatabaseService.trackDailyLogin();
+        break;
+      case 'achievement_progress':
+        await DatabaseService.trackProgress(
+          type: AchievementType.values.firstWhere(
+            (e) => e.toString().split('.').last == metadata?['achievement_type'],
+            orElse: () => AchievementType.streak,
+          ),
+          value: value,
+        );
+        break;
+    }
   }
 
   // Clear all offline data
@@ -591,12 +765,166 @@ class OfflineDatabaseService {
     );
   }
 
+  // Update cache in background without blocking the UI
+  static Future<void> _updateCacheInBackground({
+    String? category,
+    int? learnerCode,
+  }) async {
+    try {
+      // Fetch a larger set of questions to populate the cache
+      final onlineQuestions = await DatabaseService.getQuestions(
+        category: category,
+        learnerCode: learnerCode,
+        limit: 50, // Fetch more questions to build better cache
+        offset: 0,
+      );
+
+      if (onlineQuestions.isNotEmpty) {
+        await cacheQuestions(onlineQuestions);
+      }
+    } catch (e) {
+      // Silent fail - this is background operation
+    }
+  }
+
+  // Pre-cache questions for all categories when online
+  static Future<void> preCacheAllCategories() async {
+    if (!await isConnected()) return;
+
+    try {
+      // Define K53-specific categories
+      final categories = [
+        'road_signs', 'rules_of_the_road', 'vehicle_controls',
+        'safety', 'general_knowledge', 'traffic_lights',
+        'road_markings', 'emergency_vehicles', 'overtaking',
+        'parking', 'loading', 'pedestrians', 'cyclists'
+      ];
+      
+      for (final category in categories) {
+        try {
+          final questions = await DatabaseService.getQuestions(
+            category: category,
+            limit: 50, // Cache more questions per category
+          );
+          
+          if (questions.isNotEmpty) {
+            await cacheQuestions(questions);
+            print('Cached ${questions.length} questions for category: $category');
+          }
+        } catch (e) {
+          print('Error caching category $category: $e');
+          // Continue with other categories
+        }
+      }
+    } catch (e) {
+      print('Error pre-caching categories: $e');
+    }
+  }
+
+  // Get question count by category from local database
+  static Future<Map<String, int>> getQuestionCountsByCategory() async {
+    try {
+      final results = await _sqliteDb.rawQuery('''
+        SELECT category, COUNT(*) as count
+        FROM questions
+        WHERE is_active = 1
+        GROUP BY category
+      ''');
+
+      final counts = <String, int>{};
+      for (final row in results) {
+        counts[row['category'] as String] = row['count'] as int;
+      }
+      return counts;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  // Force refresh cache for a specific category
+  static Future<void> refreshCategoryCache(String category) async {
+    if (!await isConnected()) return;
+
+    try {
+      // First, remove existing questions for this category
+      await _sqliteDb.delete(
+        'questions',
+        where: 'category = ?',
+        whereArgs: [category],
+      );
+
+      // Then fetch fresh questions
+      final questions = await DatabaseService.getQuestions(
+        category: category,
+        limit: 50,
+      );
+      await cacheQuestions(questions);
+    } catch (e) {
+      print('Error refreshing category cache: $e');
+    }
+  }
+
+  // Debug method to check current cache state
+  static Future<void> debugCacheState() async {
+    try {
+      final totalQuestions = Sqflite.firstIntValue(
+        await _sqliteDb.rawQuery('SELECT COUNT(*) FROM questions WHERE is_active = 1')
+      ) ?? 0;
+      
+      final categoryCounts = await getQuestionCountsByCategory();
+      
+      print('=== OFFLINE CACHE DEBUG ===');
+      print('Total active questions: $totalQuestions');
+      print('Questions by category:');
+      categoryCounts.forEach((category, count) {
+        print('  $category: $count questions');
+      });
+      
+      if (totalQuestions == 0) {
+        print('WARNING: No questions in offline cache!');
+        print('Run preCacheAllCategories() when online to populate cache.');
+      }
+    } catch (e) {
+      print('Error debugging cache state: $e');
+    }
+  }
+
+  // Clear and rebuild cache for all categories
+  static Future<void> rebuildEntireCache() async {
+    if (!await isConnected()) {
+      print('Cannot rebuild cache - no internet connection');
+      return;
+    }
+
+    try {
+      print('Starting complete cache rebuild...');
+      
+      // Clear existing questions
+      await _sqliteDb.delete('questions');
+      print('Cleared existing questions');
+      
+      // Pre-cache all categories
+      await preCacheAllCategories();
+      
+      print('Cache rebuild completed successfully');
+      await debugCacheState();
+    } catch (e) {
+      print('Error rebuilding cache: $e');
+    }
+  }
+
   // Start listening for connectivity changes and auto-sync
   static void startConnectivityListener() {
     Connectivity().onConnectivityChanged.listen((result) async {
       if (result != ConnectivityResult.none) {
         // We have connectivity, sync pending operations
         await syncPendingOperations();
+        
+        // Also pre-cache questions when connectivity is restored
+        await preCacheAllCategories();
+        
+        // Debug current cache state
+        await debugCacheState();
       }
     });
   }

@@ -188,4 +188,22 @@ class AnalyticsService {
           'Type: $achievementType');
     }
   }
+
+  // Track image requirements for questions
+  static Future<void> trackImageRequirement({
+    required String questionId,
+    required String questionText,
+    required String? imageUrl,
+    required String category,
+    required int learnerCode,
+  }) async {
+    if (EnvironmentConfig.enableAnalytics) {
+      print('Analytics: Image requirement - '
+          'Question ID: $questionId, '
+          'Question: "${questionText.replaceAll('"', "'")}", '
+          'Image URL: $imageUrl, '
+          'Category: $category, '
+          'Learner Code: $learnerCode');
+    }
+  }
 }
