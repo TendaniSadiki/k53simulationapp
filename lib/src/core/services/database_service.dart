@@ -642,4 +642,95 @@ class DatabaseService {
       print('Error marking session as abandoned: $e');
     }
   }
+
+  // Badge Operations
+  static Future<void> updateBadgeProgress({
+    required String userId,
+    required String badgeId,
+    required int progress,
+  }) async {
+    try {
+      await _client
+          .from('user_badges')
+          .upsert({
+            'user_id': userId,
+            'badge_id': badgeId,
+            'progress': progress,
+            'updated_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'user_id,badge_id');
+    } catch (e) {
+      print('Error updating badge progress: $e');
+    }
+  }
+
+  // User Stats Operations
+  static Future<void> updateUserStats({
+    required String userId,
+    required int points,
+    required int level,
+    required int unlockedAchievements,
+  }) async {
+    try {
+      await _client
+          .from('user_stats')
+          .upsert({
+            'user_id': userId,
+            'points': points,
+            'level': level,
+            'unlocked_achievements': unlockedAchievements,
+            'updated_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'user_id');
+    } catch (e) {
+      print('Error updating user stats: $e');
+    }
+  }
+
+  // Gamification tracking methods
+  static Future<void> trackStudySessionComplete({
+    required int correctAnswers,
+    required int totalQuestions,
+    required String category,
+  }) async {
+    try {
+      // This should be implemented in GamificationService, but we'll add a stub
+      print('Tracking study session: $correctAnswers/$totalQuestions in $category');
+    } catch (e) {
+      print('Error tracking study session: $e');
+    }
+  }
+
+  static Future<void> trackExamSessionComplete({
+    required int correctAnswers,
+    required int totalQuestions,
+    required String category,
+    required bool passed,
+  }) async {
+    try {
+      // This should be implemented in GamificationService, but we'll add a stub
+      print('Tracking exam session: $correctAnswers/$totalQuestions in $category, passed: $passed');
+    } catch (e) {
+      print('Error tracking exam session: $e');
+    }
+  }
+
+  static Future<void> trackDailyLogin() async {
+    try {
+      // This should be implemented in GamificationService, but we'll add a stub
+      print('Tracking daily login');
+    } catch (e) {
+      print('Error tracking daily login: $e');
+    }
+  }
+
+  static Future<void> trackProgress({
+    required AchievementType type,
+    required int value,
+  }) async {
+    try {
+      // This should be implemented in GamificationService, but we'll add a stub
+      print('Tracking progress: $type with value $value');
+    } catch (e) {
+      print('Error tracking progress: $e');
+    }
+  }
 }

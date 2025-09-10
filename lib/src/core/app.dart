@@ -97,14 +97,12 @@ class _K53AppState extends ConsumerState<K53App> {
 
   void _continueSession(SessionState session, SessionType sessionType) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final router = GoRouter.of(context);
-      
       if (sessionType == SessionType.study) {
         ref.read(studyProvider.notifier).loadSessionState(session);
-        router.go('/study');
+        context.go('/study');
       } else if (sessionType == SessionType.exam) {
         ref.read(examProvider.notifier).loadSessionState(session);
-        router.go('/exam');
+        context.go('/exam');
       }
     });
   }

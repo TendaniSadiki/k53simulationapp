@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/models/question.dart';
 import '../../../../core/services/qa_service.dart';
 import '../providers/study_provider.dart';
@@ -349,7 +350,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  context.go('/dashboard');
                 },
                 child: const Text('Back to Dashboard'),
               ),
