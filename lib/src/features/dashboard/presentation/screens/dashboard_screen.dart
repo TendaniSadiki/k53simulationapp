@@ -80,9 +80,9 @@ class DashboardScreen extends ConsumerWidget {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.9,
               ),
               children: [
                 _buildActionCard(
@@ -160,12 +160,13 @@ class DashboardScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 28, color: color),
-              const SizedBox(height: 6),
+              Icon(icon, size: 24, color: color),
+              const SizedBox(height: 4),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -174,7 +175,9 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

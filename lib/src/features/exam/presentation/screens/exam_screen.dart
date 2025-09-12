@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -292,7 +293,39 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
                         style: Theme.of(context).textTheme.headlineSmall,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
+                      
+                      // Display image if available
+                      if (state.currentQuestion!.imageUrl != null) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Image.asset(
+                            state.currentQuestion!.imageUrl!,
+                            height: 150,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              if (kDebugMode) {
+                                print('Image loading error for ${state.currentQuestion!.imageUrl}: $error');
+                              }
+                              return Container(
+                                height: 150,
+                                color: Colors.grey[200],
+                                child: const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                                    SizedBox(height: 8),
+                                    Text('Image not available', style: TextStyle(color: Colors.grey)),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      
+                      const SizedBox(height: 8),
 
                       // Options
                       Column(
@@ -443,6 +476,11 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   @override
   Widget build(BuildContext context) {
     final examState = ref.watch(examProvider);
+    
+    // Debug: Check if current question has image URL
+    if (kDebugMode && examState.currentQuestion?.imageUrl != null) {
+      print('DEBUG: Current question image URL: ${examState.currentQuestion!.imageUrl}');
+    }
 
     if (examState.isLoading) {
       return Scaffold(
