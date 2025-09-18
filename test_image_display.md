@@ -45,12 +45,12 @@ if (state.currentQuestion!.imageUrl != null) ...[
 
 ### Test Case 1: Parking Sign Question
 - **Question**: "What does a blue rectangular sign with a white "P" indicate?"
-- **Expected Image**: `assets/images/signs/parking.png`
+- **Expected Image**: `assets/individual_signs/parking.png`
 - **Expected**: Image should display correctly
 
 ### Test Case 2: Stop Ahead Question  
 - **Question**: "What does this sign indicate?" (referring to stop ahead)
-- **Expected Image**: `assets/images/signs/stop_ahead.png`
+- **Expected Image**: `assets/individual_signs/stop_ahead.png`
 - **Expected**: Image should display correctly
 
 ### Test Case 3: Question Without Image
@@ -70,8 +70,8 @@ if (state.currentQuestion!.imageUrl != null) ...[
 ## Assets Verification
 
 Ensure these image files exist in the correct locations:
-- `assets/images/signs/parking.png`
-- `assets/images/signs/stop_ahead.png`
+- `assets/individual_signs/parking.png`
+- `assets/individual_signs/stop_ahead.png`
 
 ## Next Steps After Testing
 

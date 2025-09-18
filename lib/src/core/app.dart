@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import './app_initializer.dart';
 import './services/supabase_service.dart';
 import './services/session_persistence_service.dart';
+import './services/session_database_service.dart';
+import './models/session.dart' as session_models;
 import '../features/auth/presentation/providers/auth_provider.dart';
 import '../features/study/presentation/providers/study_provider.dart';
 import '../features/exam/presentation/providers/exam_provider.dart';
@@ -23,7 +25,17 @@ class _K53AppState extends ConsumerState<K53App> {
   @override
   void initState() {
     super.initState();
+    _initializeSessionDatabase();
     _checkForPendingSessions();
+  }
+
+  Future<void> _initializeSessionDatabase() async {
+    try {
+      await SessionDatabaseService.initialize();
+      print('Session database initialized successfully');
+    } catch (e) {
+      print('Failed to initialize session database: $e');
+    }
   }
 
   Future<void> _checkForPendingSessions() async {
@@ -43,7 +55,20 @@ class _K53AppState extends ConsumerState<K53App> {
       return;
     }
     
-    // Check for any pending sessions
+    // Check for any pending sessions using the new database system
+    final userId = SupabaseService.currentUserId;
+    List<session_models.Session> pendingSessions = [];
+    
+    if (userId != null) {
+      try {
+        pendingSessions = await SessionDatabaseService.getUserSessions(userId);
+      } catch (e) {
+        print('Error loading sessions from database: $e');
+        // Fallback to old persistence system
+      }
+    }
+    
+    // Fallback to old persistence system if database fails or no user ID
     final studySession = await SessionPersistenceService.loadStudySession();
     final examSession = await SessionPersistenceService.loadExamSession();
     
@@ -52,7 +77,21 @@ class _K53AppState extends ConsumerState<K53App> {
         _sessionRecoveryChecked = true;
       });
       
-      // Show recovery dialog only for valid sessions
+      // Show recovery dialog for database sessions first
+      if (pendingSessions.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            for (final session in pendingSessions) {
+              if (session.canRecover) {
+                _showDatabaseSessionRecoveryDialog(context, session);
+                break; // Only show recovery for first valid session
+              }
+            }
+          }
+        });
+      }
+      
+      // Fallback to old persistence system
       if (studySession != null && SessionPersistenceService.isSessionValid(studySession)) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -95,13 +134,64 @@ class _K53AppState extends ConsumerState<K53App> {
     );
   }
 
+  void _showDatabaseSessionRecoveryDialog(BuildContext context, session_models.Session session) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => SessionRecoveryDialog(
+        session: SessionState(
+          type: session.type == session_models.SessionType.study ? SessionType.study : SessionType.exam,
+          questions: [], // Will be loaded when continuing
+          currentQuestionIndex: session.currentQuestionIndex,
+          selectedAnswerIndex: null,
+          showExplanation: false,
+          sessionId: session.id,
+          correctAnswers: session.correctAnswers,
+          totalAnswered: session.totalAnswered,
+          userAnswers: {},
+          additionalData: {
+            'timeRemainingSeconds': session.timeRemainingSeconds,
+            'isPaused': session.isPaused,
+            'timestamp': session.updatedAt.millisecondsSinceEpoch,
+          },
+        ),
+        onContinue: () {
+          Navigator.of(context).pop();
+          _continueDatabaseSession(session);
+        },
+        onStartNew: () {
+          Navigator.of(context).pop();
+          _startNewDatabaseSession(session);
+        },
+      ),
+    );
+  }
+
   void _continueSession(SessionState session, SessionType sessionType) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (sessionType == SessionType.study) {
         ref.read(studyProvider.notifier).loadSessionState(session);
         context.go('/study');
       } else if (sessionType == SessionType.exam) {
-        ref.read(examProvider.notifier).loadSessionState(session);
+        // For exam sessions, use the session ID with the new database system
+        if (session.sessionId != null) {
+          ref.read(examProvider.notifier).loadSessionState(session.sessionId!);
+        } else {
+          // Fallback to old method if no session ID
+          ref.read(examProvider.notifier).loadSession(session);
+        }
+        context.go('/exam');
+      }
+    });
+  }
+
+  void _continueDatabaseSession(session_models.Session session) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (session.type == session_models.SessionType.study) {
+        // TODO: Implement study session loading from database
+        context.go('/study');
+      } else if (session.type == session_models.SessionType.exam) {
+        ref.read(examProvider.notifier).loadSessionState(session.id);
         context.go('/exam');
       }
     });
@@ -113,6 +203,11 @@ class _K53AppState extends ConsumerState<K53App> {
     } else if (sessionType == SessionType.exam) {
       SessionPersistenceService.clearExamSession();
     }
+  }
+
+  void _startNewDatabaseSession(session_models.Session session) {
+    // Delete the session from database
+    SessionDatabaseService.deleteSession(session.id);
   }
 
   @override

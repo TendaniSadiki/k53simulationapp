@@ -70,7 +70,7 @@ Check that the migration was successful:
 - ✅ Road sign mock exams will display images correctly
 - ✅ All 52+ road sign questions will be available
 - ✅ No more database schema errors
-- ✅ Proper image paths like `assets/images/signs/parking.png`
+- ✅ Proper image paths like `assets/individual_signs/parking.png`
 
 ## Troubleshooting
 

@@ -46,7 +46,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       _hasNavigatedToReview = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.go('/exam/review');
+          context.go('/exam/results');
         }
       });
     }

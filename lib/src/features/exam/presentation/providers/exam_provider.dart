@@ -1,12 +1,17 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/question.dart';
+import '../../../../core/models/session.dart' as session_models;
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/offline_database_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/exam_timer_service.dart';
 import '../../../../core/services/session_persistence_service.dart';
+import '../../../../core/services/session_database_service.dart';
+import '../../../../core/services/session_migration_service.dart';
+import '../../../../core/services/session_recovery_service.dart';
+import '../../../../core/services/gamification_service.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../data/mock_exam_config.dart';
 
@@ -102,8 +107,9 @@ class ExamState {
 
 class ExamNotifier extends StateNotifier<ExamState> {
   ExamTimerService? _timerService;
+  final Ref? _ref; // Store ref for gamification access
 
-  ExamNotifier() : super(ExamState(
+  ExamNotifier({Ref? ref}) : _ref = ref, super(ExamState(
     questions: [],
     currentQuestionIndex: 0,
     isLoading: false,
@@ -160,34 +166,64 @@ class ExamNotifier extends StateNotifier<ExamState> {
         return;
       }
 
-      // Create a new exam session
+      // Create a new exam session using the new session database
       final userId = SupabaseService.currentUserId;
       if (userId != null) {
-        final session = await DatabaseService.createSession(
-          userId: userId,
-          mode: 'mock_exam',
-          category: category,
-          totalQuestions: questions.length,
-        );
+        try {
+          // Create session using new database system
+          final session = session_models.Session(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            type: session_models.SessionType.exam,
+            userId: userId,
+            category: category,
+            totalQuestions: questions.length,
+            currentQuestionIndex: 0,
+            correctAnswers: 0,
+            totalAnswered: 0,
+            timeRemainingSeconds: examDurationSeconds,
+            isPaused: false,
+            isCompleted: false,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            expiresAt: DateTime.now().add(const Duration(hours: 24)),
+            metadata: {
+              'mock_exam_config': mockExamConfig?.toString(),
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+            },
+          );
 
-        if (session != null) {
+          final sessionId = await SessionDatabaseService.createSession(session, questions);
+          
           await AnalyticsService.trackExamSessionStart(
-            sessionId: session['id'],
+            sessionId: sessionId,
             category: category ?? 'all',
             timeLimitMinutes: 45, // K53 exam is 45 minutes
           );
-        }
 
-        state = state.copyWith(
-          questions: questions,
-          isLoading: false,
-          sessionId: session?['id'],
-          questionStartTimes: {questions[0].id: DateTime.now().millisecondsSinceEpoch},
-        );
+          state = state.copyWith(
+            questions: questions,
+            isLoading: false,
+            sessionId: sessionId,
+            questionStartTimes: {questions[0].id: DateTime.now().millisecondsSinceEpoch},
+          );
+        } catch (e) {
+          print('Failed to create session in database: $e');
+          // Fallback to session ID only without database persistence
+          final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+          state = state.copyWith(
+            questions: questions,
+            isLoading: false,
+            sessionId: sessionId,
+            questionStartTimes: {questions[0].id: DateTime.now().millisecondsSinceEpoch},
+          );
+        }
       } else {
+        // Anonymous user - create session without database persistence
+        final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
         state = state.copyWith(
           questions: questions,
           isLoading: false,
+          sessionId: sessionId,
           questionStartTimes: {questions[0].id: DateTime.now().millisecondsSinceEpoch},
         );
       }
@@ -232,11 +268,14 @@ class ExamNotifier extends StateNotifier<ExamState> {
     final newUserAnswers = Map<String, int>.from(state.userAnswers);
     newUserAnswers[state.currentQuestion!.id] = answerIndex;
 
+    final newTotalAnswered = state.totalAnswered + 1;
+    final allQuestionsAnswered = newTotalAnswered == state.questions.length;
+
     state = state.copyWith(
       selectedAnswerIndex: answerIndex,
       showExplanation: true,
       correctAnswers: newCorrectAnswers,
-      totalAnswered: state.totalAnswered + 1,
+      totalAnswered: newTotalAnswered,
       userAnswers: newUserAnswers,
     );
 
@@ -254,12 +293,22 @@ class ExamNotifier extends StateNotifier<ExamState> {
       );
     }
 
+    // Award points for correct answers immediately
+    if (isCorrect) {
+      await _awardPointsForCorrectAnswer();
+    }
+
     // Auto-advance to next question after 2 seconds for exam flow
     if (!state.isLastQuestion) {
       await Future.delayed(const Duration(seconds: 2));
       nextQuestion();
     } else {
       // Last question answered, complete the exam
+      await _completeExam();
+    }
+
+    // Check if all questions have been answered (user might have answered out of order)
+    if (allQuestionsAnswered && !state.isCompleted) {
       await _completeExam();
     }
   }
@@ -357,13 +406,28 @@ class ExamNotifier extends StateNotifier<ExamState> {
             : 0
           : 0;
       
-      // Update session completion
-      await DatabaseService.updateSession(
-        sessionId: state.sessionId!,
-        score: state.correctAnswers,
-        timeSpentSeconds: timeSpentSeconds,
-        isCompleted: true,
-      );
+      // Update session completion in the new database
+      if (state.sessionId != null) {
+        try {
+          // Load the current session
+          final session = await SessionDatabaseService.getSession(state.sessionId!);
+          if (session != null) {
+            // Update session with completion data
+            final updatedSession = session.copyWith(
+              correctAnswers: state.correctAnswers,
+              totalAnswered: state.totalAnswered,
+              timeRemainingSeconds: timeSpentSeconds,
+              isCompleted: true,
+              updatedAt: DateTime.now(),
+            );
+            
+            await SessionDatabaseService.updateSession(updatedSession);
+          }
+        } catch (e) {
+          print('Error updating session in database: $e');
+          // Continue with completion even if database update fails
+        }
+      }
 
       // Clear session persistence
       await SessionPersistenceService.clearExamSession();
@@ -381,7 +445,17 @@ class ExamNotifier extends StateNotifier<ExamState> {
       // Track gamification progress
       if (state.questions.isNotEmpty) {
         final category = state.questions.first.category;
-        // This will be handled by the exam screen using the ref
+        
+        // Use the gamification provider to track exam completion
+        if (_ref != null) {
+          final gamificationNotifier = _ref!.read(gamificationProvider.notifier);
+          await gamificationNotifier.trackExamSessionComplete(
+            correctAnswers: state.correctAnswers,
+            totalQuestions: state.questions.length,
+            category: category,
+            passed: state.hasPassed,
+          );
+        }
       }
     } catch (e) {
       print('Error completing exam: $e');
@@ -392,36 +466,9 @@ class ExamNotifier extends StateNotifier<ExamState> {
 
 
   Future<void> retryExam() async {
-    // Dispose of current timer
-    _timerService?.dispose();
-
-    // Recalculate exam duration based on current question count
-    final examDurationSeconds = (state.questions.length * 90).clamp(300, 7200);
-
-    state = ExamState(
-      questions: state.questions,
-      currentQuestionIndex: 0,
-      isLoading: false,
-      showExplanation: false,
-      sessionId: state.sessionId,
-      correctAnswers: 0,
-      totalAnswered: 0,
-      timeRemainingSeconds: examDurationSeconds,
-      isPaused: false,
-      isCompleted: false,
-      questionStartTimes: {state.questions[0].id: DateTime.now().millisecondsSinceEpoch},
-      mockExamConfig: state.mockExamConfig,
-      userAnswers: {},
-    );
-
-    // Initialize and restart timer
-    _timerService = ExamTimerService(totalDurationSeconds: examDurationSeconds);
-    _setupTimerListener();
-    _timerService!.start();
-
-    // Save session state
-    await saveSessionState();
-
+    // Use the new reset method to completely clear the state
+    resetExam();
+    
     await AnalyticsService.trackUserEngagement(
       eventName: 'exam_retry',
       properties: {'question_count': state.questions.length},
@@ -430,6 +477,27 @@ class ExamNotifier extends StateNotifier<ExamState> {
 
   void clearError() {
     state = state.copyWith(error: null);
+  }
+
+  // Completely reset the exam state to allow starting a new exam
+  void resetExam() {
+    _timerService?.dispose();
+    _timerService = null;
+    
+    state = ExamState(
+      questions: [],
+      currentQuestionIndex: 0,
+      isLoading: false,
+      showExplanation: false,
+      correctAnswers: 0,
+      totalAnswered: 0,
+      timeRemainingSeconds: 45 * 60,
+      isPaused: false,
+      isCompleted: false,
+      questionStartTimes: {},
+      mockExamConfig: null,
+      userAnswers: {},
+    );
   }
 
   // Handle app lifecycle events (e.g., when app goes to background)
@@ -449,53 +517,159 @@ class ExamNotifier extends StateNotifier<ExamState> {
   Future<void> saveSessionState() async {
     if (state.sessionId == null || state.questions.isEmpty) return;
 
-    final sessionState = SessionState(
-      type: SessionType.exam,
-      questions: state.questions,
-      currentQuestionIndex: state.currentQuestionIndex,
-      selectedAnswerIndex: state.selectedAnswerIndex,
-      showExplanation: state.showExplanation,
-      sessionId: state.sessionId,
-      correctAnswers: state.correctAnswers,
-      totalAnswered: state.totalAnswered,
-      userAnswers: state.userAnswers,
-      additionalData: {
-        'timeRemainingSeconds': state.timeRemainingSeconds,
-        'isPaused': state.isPaused,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    );
+    try {
+      // First, migrate any old sessions if needed
+      await SessionMigrationService.migrateFromSharedPreferences();
 
-    await SessionPersistenceService.saveExamSession(sessionState);
+      // Create or update session in database
+      final session = session_models.Session(
+        id: state.sessionId!,
+        type: session_models.SessionType.exam,
+        userId: SupabaseService.currentUserId,
+        category: state.questions.isNotEmpty ? state.questions.first.category : null,
+        totalQuestions: state.questions.length,
+        currentQuestionIndex: state.currentQuestionIndex,
+        correctAnswers: state.correctAnswers,
+        totalAnswered: state.totalAnswered,
+        timeRemainingSeconds: state.timeRemainingSeconds,
+        isPaused: state.isPaused,
+        isCompleted: state.isCompleted,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        expiresAt: DateTime.now().add(const Duration(hours: 24)),
+        metadata: {
+          'mock_exam_config': state.mockExamConfig?.toString(),
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+
+      await SessionDatabaseService.createSession(session, state.questions);
+      
+      // Also update session progress for real-time tracking
+      await SessionRecoveryService.updateSessionProgress(
+        sessionId: state.sessionId!,
+        currentQuestionIndex: state.currentQuestionIndex,
+        correctAnswers: state.correctAnswers,
+        totalAnswered: state.totalAnswered,
+        timeRemainingSeconds: state.timeRemainingSeconds,
+      );
+
+    } catch (e) {
+      print('Error saving session state to database: $e');
+      // Fallback to old SharedPreferences method if database fails
+      final sessionState = SessionState(
+        type: SessionType.exam,
+        questions: state.questions,
+        currentQuestionIndex: state.currentQuestionIndex,
+        selectedAnswerIndex: state.selectedAnswerIndex,
+        showExplanation: state.showExplanation,
+        sessionId: state.sessionId,
+        correctAnswers: state.correctAnswers,
+        totalAnswered: state.totalAnswered,
+        userAnswers: state.userAnswers,
+        additionalData: {
+          'timeRemainingSeconds': state.timeRemainingSeconds,
+          'isPaused': state.isPaused,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      await SessionPersistenceService.saveExamSession(sessionState);
+    }
   }
 
   // Load session state from persistence
-  Future<void> loadSessionState(SessionState sessionState) async {
-    state = ExamState(
-      questions: sessionState.questions,
-      currentQuestionIndex: sessionState.currentQuestionIndex,
-      isLoading: false,
-      selectedAnswerIndex: sessionState.selectedAnswerIndex,
-      showExplanation: sessionState.showExplanation,
-      sessionId: sessionState.sessionId,
-      correctAnswers: sessionState.correctAnswers,
-      totalAnswered: sessionState.totalAnswered,
-      timeRemainingSeconds: sessionState.additionalData['timeRemainingSeconds'] ?? 45 * 60,
-      isPaused: sessionState.additionalData['isPaused'] ?? false,
-      isCompleted: false,
-      questionStartTimes: {sessionState.questions[sessionState.currentQuestionIndex].id: DateTime.now().millisecondsSinceEpoch},
-      mockExamConfig: null,
-      userAnswers: sessionState.userAnswers,
-    );
+  Future<void> loadSessionState(String sessionId) async {
+    try {
+      // First, migrate any old sessions if needed
+      await SessionMigrationService.migrateFromSharedPreferences();
 
-    // Initialize timer with remaining time
-    final remainingSeconds = sessionState.additionalData['timeRemainingSeconds'] ?? 45 * 60;
-    _timerService?.dispose();
-    _timerService = ExamTimerService(totalDurationSeconds: remainingSeconds);
-    _setupTimerListener();
+      // Load session from database
+      final session = await SessionDatabaseService.getSession(sessionId);
+      if (session == null) {
+        print('Session not found in database: $sessionId');
+        return;
+      }
 
-    if (sessionState.additionalData['isPaused'] != true) {
-      _timerService!.start();
+      // Validate session can be recovered
+      if (!await SessionRecoveryService.validateSession(session)) {
+        print('Session is not valid for recovery: $sessionId');
+        return;
+      }
+
+      // Get session questions
+      // Get session questions
+      final questions = await SessionDatabaseService.getSessionQuestions(sessionId);
+
+      state = ExamState(
+        questions: questions,
+        currentQuestionIndex: session.currentQuestionIndex,
+        isLoading: false,
+        selectedAnswerIndex: null, // Reset selected answer on load
+        showExplanation: false, // Reset explanation on load
+        sessionId: session.id,
+        correctAnswers: session.correctAnswers,
+        totalAnswered: session.totalAnswered,
+        timeRemainingSeconds: session.timeRemainingSeconds,
+        isPaused: session.isPaused,
+        isCompleted: session.isCompleted,
+        questionStartTimes: {questions[session.currentQuestionIndex].id: DateTime.now().millisecondsSinceEpoch},
+        mockExamConfig: null, // Will be restored from metadata if needed
+        userAnswers: {}, // Will be loaded from session answers
+      );
+
+      // Load user answers for review
+      final sessionAnswers = await SessionDatabaseService.getSessionAnswers(sessionId);
+      final userAnswers = <String, int>{};
+      for (final answer in sessionAnswers) {
+        userAnswers[answer.questionId] = answer.chosenIndex;
+      }
+      
+      state = state.copyWith(userAnswers: userAnswers);
+
+      // Initialize timer with remaining time
+      _timerService?.dispose();
+      _timerService = ExamTimerService(totalDurationSeconds: session.timeRemainingSeconds);
+      _setupTimerListener();
+
+      if (!session.isPaused) {
+        _timerService!.start();
+      }
+
+      print('Successfully loaded session from database: $sessionId');
+
+    } catch (e) {
+      print('Error loading session from database: $e');
+      
+      // Fallback to old SharedPreferences method if database fails
+      final sessionState = await SessionPersistenceService.loadExamSession();
+      if (sessionState != null) {
+        state = ExamState(
+          questions: sessionState.questions,
+          currentQuestionIndex: sessionState.currentQuestionIndex,
+          isLoading: false,
+          selectedAnswerIndex: sessionState.selectedAnswerIndex,
+          showExplanation: sessionState.showExplanation,
+          sessionId: sessionState.sessionId,
+          correctAnswers: sessionState.correctAnswers,
+          totalAnswered: sessionState.totalAnswered,
+          timeRemainingSeconds: sessionState.additionalData['timeRemainingSeconds'] ?? 45 * 60,
+          isPaused: sessionState.additionalData['isPaused'] ?? false,
+          isCompleted: false,
+          questionStartTimes: {sessionState.questions[sessionState.currentQuestionIndex].id: DateTime.now().millisecondsSinceEpoch},
+          mockExamConfig: null,
+          userAnswers: sessionState.userAnswers,
+        );
+
+        // Initialize timer with remaining time
+        final remainingSeconds = sessionState.additionalData['timeRemainingSeconds'] ?? 45 * 60;
+        _timerService?.dispose();
+        _timerService = ExamTimerService(totalDurationSeconds: remainingSeconds);
+        _setupTimerListener();
+
+        if (sessionState.additionalData['isPaused'] != true) {
+          _timerService!.start();
+        }
+      }
     }
   }
 
@@ -508,8 +682,75 @@ class ExamNotifier extends StateNotifier<ExamState> {
       mockExamConfig: config,
     );
   }
+
+  // Overloaded method to handle both old and new session loading
+  Future<void> loadSession(dynamic sessionData) async {
+    if (sessionData is String) {
+      // New database system - session ID
+      await loadSessionState(sessionData);
+    } else if (sessionData is SessionState) {
+      // Old SharedPreferences system - full session state
+      // This is a fallback for migration period
+      state = ExamState(
+        questions: sessionData.questions,
+        currentQuestionIndex: sessionData.currentQuestionIndex,
+        isLoading: false,
+        selectedAnswerIndex: sessionData.selectedAnswerIndex,
+        showExplanation: sessionData.showExplanation,
+        sessionId: sessionData.sessionId,
+        correctAnswers: sessionData.correctAnswers,
+        totalAnswered: sessionData.totalAnswered,
+        timeRemainingSeconds: sessionData.additionalData['timeRemainingSeconds'] ?? 45 * 60,
+        isPaused: sessionData.additionalData['isPaused'] ?? false,
+        isCompleted: false,
+        questionStartTimes: {sessionData.questions[sessionData.currentQuestionIndex].id: DateTime.now().millisecondsSinceEpoch},
+        mockExamConfig: null,
+        userAnswers: sessionData.userAnswers,
+      );
+
+      // Initialize timer with remaining time
+      final remainingSeconds = sessionData.additionalData['timeRemainingSeconds'] ?? 45 * 60;
+      _timerService?.dispose();
+      _timerService = ExamTimerService(totalDurationSeconds: remainingSeconds);
+      _setupTimerListener();
+
+      if (sessionData.additionalData['isPaused'] != true) {
+        _timerService!.start();
+      }
+    }
+  }
+  // Award points for correct answers
+  Future<void> _awardPointsForCorrectAnswer() async {
+    try {
+      // Award 10 points for each correct answer using offline tracking
+      await GamificationService().trackOfflineActivity(
+        activityType: 'correct_answer',
+        value: 10, // 10 points per correct answer
+        metadata: {
+          'question_id': state.currentQuestion?.id,
+          'category': state.currentQuestion?.category,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      
+      // Also track daily points
+      await GamificationService().trackOfflineActivity(
+        activityType: 'daily_points',
+        value: 10, // 10 daily points per correct answer
+        metadata: {
+          'question_id': state.currentQuestion?.id,
+          'category': state.currentQuestion?.category,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'is_daily': true,
+        },
+      );
+    } catch (e) {
+      print('Error awarding points: $e');
+    }
+  }
 }
 
+
 final examProvider = StateNotifierProvider<ExamNotifier, ExamState>((ref) {
-  return ExamNotifier();
+  return ExamNotifier(ref: ref);
 });

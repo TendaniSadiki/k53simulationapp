@@ -6,14 +6,24 @@ class OfflineDataPreloader {
     try {
       // Check if we already have questions in the local database
       final localStats = await OfflineDatabaseService.getLocalStats();
-      if ((localStats['questions'] ?? 0) > 0) {
+      if ((localStats['questions'] ?? 0) > 50) {
         print('Questions already preloaded in local database');
         return;
       }
 
       print('Preloading questions into local database...');
 
-      // Create a basic set of questions for offline use
+      // Try to pre-cache all categories from online database if connected
+      try {
+        await OfflineDatabaseService.preCacheAllCategories();
+        print('Successfully pre-cached questions from online database');
+        return;
+      } catch (e) {
+        print('Could not pre-cache from online database: $e');
+        // Fall back to basic offline questions
+      }
+
+      // Create a basic set of questions for offline use (fallback)
       final List<Question> questions = [
         // Rules of Road - Basic questions
         Question(
@@ -118,7 +128,7 @@ class OfflineDataPreloader {
       // Cache the questions in the local database
       await OfflineDatabaseService.cacheQuestions(questions);
       
-      print('Preloaded ${questions.length} basic questions into local database');
+      print('Preloaded ${questions.length} basic questions into local database (fallback)');
     } catch (e) {
       print('Error preloading questions: $e');
       // This is not critical - the app will still work and cache questions as they're loaded
@@ -128,6 +138,6 @@ class OfflineDataPreloader {
   // Method to check if we need to preload data
   static Future<bool> needsPreloading() async {
     final localStats = await OfflineDatabaseService.getLocalStats();
-    return (localStats['questions'] ?? 0) == 0;
+    return (localStats['questions'] ?? 0) < 50;
   }
 }

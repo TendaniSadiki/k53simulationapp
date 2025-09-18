@@ -191,14 +191,22 @@ class _ExamResultsScreenState extends ConsumerState<ExamResultsScreen> {
             ),
             const SizedBox(height: 24),
             
-            // Result Message
-            Text(
-              resultMessage,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: resultColor,
-                fontWeight: FontWeight.bold,
+            // Result Message with more prominent display
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: hasPassed ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: resultColor, width: 2),
               ),
-              textAlign: TextAlign.center,
+              child: Text(
+                resultMessage,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: resultColor,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
             const SizedBox(height: 32),
             
@@ -249,13 +257,22 @@ class _ExamResultsScreenState extends ConsumerState<ExamResultsScreen> {
                   child: const Text('Try Again'),
                 ),
                 ElevatedButton(
+                  onPressed: () => context.go('/exam/review'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: const Text('Review Answers'),
+                ),
+                ElevatedButton(
                   onPressed: () => context.go('/dashboard'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[300],
                     foregroundColor: Colors.black87,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
-                  child: const Text('Back to Dashboard'),
+                  child: const Text('Dashboard'),
                 ),
               ],
             ),

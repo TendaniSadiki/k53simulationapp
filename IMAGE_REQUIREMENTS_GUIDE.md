@@ -8,11 +8,11 @@ This document explains how to identify which questions in the K53 exam preparati
 Based on the code analysis, the following questions currently reference images:
 
 ### Road Signs Category
-1. **Parking Sign Question** - [`assets/images/signs/parking.png`](scripts/k53_question_database.dart:105)
+1. **Parking Sign Question** - [`assets/individual_signs/parking.png`](scripts/k53_question_database.dart:105)
    - Question: "What does a blue rectangular sign with a white "P" indicate?"
    - Location: [`scripts/k53_question_database.dart`](scripts/k53_question_database.dart:105)
 
-2. **Stop Ahead Sign Question** - [`assets/images/signs/stop_ahead.png`](scripts/complete_k53_seed.dart:210)
+2. **Stop Ahead Sign Question** - [`assets/individual_signs/stop_ahead.png`](scripts/complete_k53_seed.dart:210)
    - Question: "What does this sign indicate?" (referring to a stop ahead sign)
    - Location: [`scripts/complete_k53_seed.dart`](scripts/complete_k53_seed.dart:210)
 
@@ -34,7 +34,7 @@ Analytics: Image requirement - Question ID: [id], Question: "[text]", Image URL:
 
 ### 3. Example Output
 ```
-Analytics: Image requirement - Question ID: abc123, Question: "What does this road sign indicate?", Image URL: assets/images/signs/stop_ahead.png, Category: road_signs, Learner Code: 1
+Analytics: Image requirement - Question ID: abc123, Question: "What does this road sign indicate?", Image URL: assets/individual_signs/stop_ahead.png, Category: road_signs, Learner Code: 1
 Analytics: Image requirement - Question ID: def456, Question: "What is the legal blood alcohol limit?", Image URL: null, Category: general_knowledge, Learner Code: 1
 ```
 

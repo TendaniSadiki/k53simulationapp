@@ -6,8 +6,8 @@ void main() {
 
   // Test the image paths referenced in the question database
   final imagePaths = [
-    'assets/images/signs/parking.png',
-    'assets/images/signs/stop_ahead.png',
+    'assets/individual_signs/parking.png',
+    'assets/individual_signs/stop_ahead.png',
   ];
 
   int successCount = 0;

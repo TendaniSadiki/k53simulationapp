@@ -221,7 +221,7 @@ List<Map<String, dynamic>> _getRoadSignsQuestions() {
       'correct_index': 0,
       'explanation': 'This triangular sign with red border and "STOP" text indicates a stop sign is ahead.',
       'difficulty_level': 1,
-      'image_url': 'assets/images/signs/stop_ahead.png',
+      'image_url': 'assets/individual_signs/stop_ahead.png',
     },
     {
       'category': 'road_signs',
@@ -251,7 +251,7 @@ List<Map<String, dynamic>> _getRoadSignsQuestions() {
       'correct_index': 1,
       'explanation': 'A white "P" on blue background indicates a parking area.',
       'difficulty_level': 1,
-      'image_url': 'assets/images/signs/parking.png',
+      'image_url': 'assets/individual_signs/parking.png',
     },
   ];
 }

@@ -170,10 +170,67 @@ class OfflineDatabaseService {
         },
       );
 
+      // Add session tables to existing database
+      await _addSessionTables(_sqliteDb);
+
       _isInitialized = true;
     } catch (e) {
       print('Error initializing offline database: $e');
     }
+  }
+
+  // Get the database instance for other services to use
+  static Database get database => _sqliteDb;
+
+  // Add session tables to existing database
+  static Future<void> _addSessionTables(Database db) async {
+    // Create sessions table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        user_id TEXT,
+        category TEXT,
+        total_questions INTEGER,
+        current_question_index INTEGER DEFAULT 0,
+        correct_answers INTEGER DEFAULT 0,
+        total_answered INTEGER DEFAULT 0,
+        time_remaining_seconds INTEGER,
+        is_paused INTEGER DEFAULT 0,
+        is_completed INTEGER DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        expires_at TEXT,
+        metadata TEXT
+      )
+    ''');
+
+    // Create session_questions table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS session_questions (
+        session_id TEXT,
+        question_id TEXT,
+        question_index INTEGER,
+        question_data TEXT,
+        PRIMARY KEY (session_id, question_id),
+        FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Create session_answers table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS session_answers (
+        session_id TEXT,
+        question_id TEXT,
+        chosen_index INTEGER,
+        is_correct INTEGER,
+        elapsed_ms INTEGER,
+        hints_used INTEGER DEFAULT 0,
+        answered_at TEXT,
+        PRIMARY KEY (session_id, question_id),
+        FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   // Check internet connectivity

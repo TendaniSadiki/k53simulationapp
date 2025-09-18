@@ -18,13 +18,14 @@ ADD COLUMN localized_texts JSONB;
 
 -- Update existing questions that should have images
 -- This will be populated by the seeding script
-UPDATE questions 
-SET image_url = 'assets/images/signs/parking.png'
-WHERE question_text LIKE '%blue rectangular sign with a white "P"%';
+-- Note: These updates are for reference only - actual image URLs are set by seeding script
+-- UPDATE questions
+-- SET image_url = 'assets/individual_signs/parking.png'
+-- WHERE question_text LIKE '%blue rectangular sign with a white "P"%';
 
-UPDATE questions 
-SET image_url = 'assets/images/signs/stop_ahead.png'  
-WHERE question_text LIKE '%triangular sign with red border%';
+-- UPDATE questions
+-- SET image_url = 'assets/individual_signs/stop_ahead.png'
+-- WHERE question_text LIKE '%triangular sign with red border%';
 
 -- Create index for better performance on media queries
 CREATE INDEX idx_questions_image_url ON questions(image_url) WHERE image_url IS NOT NULL;
