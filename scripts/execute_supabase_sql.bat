@@ -39,46 +39,43 @@ setx SUPABASE_DB_PASSWORD %SUPABASE_DB_PASSWORD%
 
 echo.
 echo Step 1: Checking and creating tables if needed...
-supabase db execute --file scripts/check_and_create_tables.sql
-
-if %errorlevel% neq 0 (
-    echo.
-    echo ⚠️  Table check failed! Please check your database connection.
-    echo.
-    echo You may need to manually create the tables first.
-    echo Refer to scripts/EXECUTE_ROAD_SIGN_QUESTIONS_GUIDE.md for manual setup.
-    pause
-    exit /b 1
-)
+echo.
+echo ⚠️  Supabase CLI command syntax has changed!
+echo.
+echo Please execute the SQL files manually in the Supabase SQL Editor:
+echo.
+echo 1. Go to: https://app.supabase.com/
+echo 2. Select your project
+echo 3. Open the SQL Editor
+echo 4. Execute each file in this order:
+echo.
+echo    First: \i scripts/check_and_create_tables.sql
+echo    Second: \i scripts/road_sign_questions_output_fixed.sql
+echo    Third: \i scripts/seed_evolve_questions_with_images.sql
+echo.
+echo Or copy/paste the contents of each file into the SQL Editor.
+echo.
+echo For detailed instructions, see: scripts/EXECUTE_ROAD_SIGN_QUESTIONS_GUIDE.md
 
 echo.
-echo Step 2: Executing road sign questions SQL...
-supabase db execute --file scripts/road_sign_questions_output.sql
-
-if %errorlevel% equ 0 (
-    echo.
-    echo ✅ SQL executed successfully!
-    echo.
-    echo Please verify the insertion in your Supabase dashboard:
-    echo 1. Go to https://app.supabase.com/
-    echo 2. Select your project
-    echo 3. Check the 'questions' table
-    echo 4. Filter by category = 'road_signs'
-    echo.
-    echo You should see 19 new road sign questions with images.
-) else (
-    echo.
-    echo ❌ SQL execution failed!
-    echo.
-    echo Please check:
-    echo 1. Your database connection settings
-    echo 2. The SQL file syntax
-    echo 3. Your Supabase project permissions
-    echo.
-    echo For manual execution, use the Supabase SQL Editor with:
-    echo - scripts/check_and_create_tables.sql (first)
-    echo - scripts/road_sign_questions_output.sql (second)
-)
+echo ⚠️  IMPORTANT: The SQL files were NOT executed automatically.
+echo.
+echo You must manually execute them in the Supabase SQL Editor:
+echo.
+echo 1. Go to: https://app.supabase.com/
+echo 2. Select your project
+echo 3. Open the SQL Editor
+echo 4. Execute each file in this order:
+echo.
+echo    First: Copy/paste contents of scripts/check_and_create_tables.sql
+echo    Second: Copy/paste contents of scripts/road_sign_questions_output_fixed.sql
+echo    Third: Copy/paste contents of scripts/seed_evolve_questions_with_images.sql
+echo.
+echo After execution, verify the results:
+echo - 19 road sign questions with images
+echo - 72 rules of road questions (some with images)
+echo - Vehicle controls questions
+echo - Total: 196+ questions with comprehensive image support
 
 echo.
 pause

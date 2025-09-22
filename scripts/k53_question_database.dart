@@ -1,6 +1,6 @@
 
 // Complete K53 Question Database - 196+ Questions
-// Categories: Rules of Road, Road Signs, Vehicle Controls, General Knowledge
+// Categories: Rules of Road, Road Signs, Vehicle Controls (Code 1, Code 2, Code 3), General Knowledge
 
 Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
   'rules_of_road': [
@@ -202,7 +202,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'This sign indicates a stop sign is ahead. Prepare to come to a complete stop.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/Stop in line with the Stop sign or before the line.png',
+      'image_url': 'assets/individual_signs/CONTROL SIGNS/Stop in line with the Stop sign or before the line.png',
     },
     {
       'category': 'road_signs',
@@ -217,7 +217,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Stop in line with the stop sign or before the line when required to stop.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/Stop in line with the Stop sign or befor_1.png',
+      'image_url': 'assets/individual_signs/CONTROL SIGNS/Stop in line with the Stop sign or befor_1.png',
     },
 
     // Parking Signs
@@ -234,7 +234,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'This area is reserved for general parking.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/This area is reserved for parking.png',
+      'image_url': 'assets/individual_signs/RESERVATION SIGNS/This area is reserved for parking.png',
     },
     {
       'category': 'road_signs',
@@ -249,7 +249,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'This area is reserved for parking by authorized vehicles only.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/This area is reserved for parking by authorized vehicles.png',
+      'image_url': 'assets/individual_signs/RESERVATION SIGNS/This area is reserved for parking by authorized vehicles.png',
     },
     {
       'category': 'road_signs',
@@ -264,7 +264,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'This area is reserved exclusively for police vehicle parking.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/This area is reserved for parking by police vehicles.png',
+      'image_url': 'assets/individual_signs/RESERVATION SIGNS/This area is reserved for parking by police vehicles.png',
     },
     {
       'category': 'road_signs',
@@ -279,7 +279,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Parking reserved for the specific class of vehicle shown on the sign.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/This area is reserved for parking by the class of vehicle shown.png',
+      'image_url': 'assets/individual_signs/RESERVATION SIGNS/This area is reserved for parking by the class of vehicle shown.png',
     },
     {
       'category': 'road_signs',
@@ -294,7 +294,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Parking allowed for up to a maximum of 60 minutes only.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/This area is reserved for parking, up to a maximum of 60 minutes.png',
+      'image_url': 'assets/individual_signs/RESERVATION SIGNS/This area is reserved for parking, up to a maximum of 60 minutes.png',
     },
     {
       'category': 'road_signs',
@@ -309,7 +309,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Temporary parking reservation for the specific class of vehicle shown.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/This area is temporarily reserved for parking by the class of vehicle shown.png',
+      'image_url': 'assets/individual_signs/RESERVATION SIGNS/This area is temporarily reserved for parking by the class of vehicle shown.png',
     },
 
     // Prohibition Signs
@@ -326,7 +326,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits vehicles from turning around (U-turn) to face the opposite direction.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit vehicles from turning around (u-turn) so that it faces the opposite direction.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit vehicles from turning around (u-turn) so that it faces the opposite direction.png',
     },
     {
       'category': 'road_signs',
@@ -341,7 +341,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits vehicles from turning left at an intersection.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit vehicles from turning left at an intersection.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit vehicles from turning left at an intersection.png',
     },
     {
       'category': 'road_signs',
@@ -356,7 +356,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits vehicles from turning left.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit vehicles from turning left.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit vehicles from turning left.png',
     },
     {
       'category': 'road_signs',
@@ -371,7 +371,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits vehicles from turning right at an intersection.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit vehicles from turning right at an intersection.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit vehicles from turning right at an intersection.png',
     },
     {
       'category': 'road_signs',
@@ -386,7 +386,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits vehicles from turning right.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit vehicles from turning right.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit vehicles from turning right.png',
     },
     {
       'category': 'road_signs',
@@ -401,7 +401,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits parking during any time of the day or night.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit drivers from parking during any time of the day or night.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit drivers from parking during any time of the day or night.png',
     },
     {
       'category': 'road_signs',
@@ -416,7 +416,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits hawkers in this area during any time of the day or night.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit hawkers in this area during any time of the day or night.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit hawkers in this area during any time of the day or night.png',
     },
     {
       'category': 'road_signs',
@@ -431,7 +431,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits motorcycles on this part of the carriageway for safety reasons.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit motorcycles on a part of a carriageway for safety reasons.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit motorcycles on a part of a carriageway for safety reasons.png',
     },
     {
       'category': 'road_signs',
@@ -446,7 +446,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits excessive noise if your vehicle exceeds permitted noise levels.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit noise, if the noise level of your vehi.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit noise, if the noise level of your vehi.png',
     },
     {
       'category': 'road_signs',
@@ -461,7 +461,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits pedestrians and stationary vehicles in this area.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit pedestrians and stationary vehicles. A.png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit pedestrians and stationary vehicles. A.png',
     },
     {
       'category': 'road_signs',
@@ -476,7 +476,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Prohibits pedestrians from proceeding past this point.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To prohibit pedestrians from proceeding past this .png',
+      'image_url': 'assets/individual_signs/PROHIBITION SIGNS/To prohibit pedestrians from proceeding past this .png',
     },
 
     // Regulatory Signs
@@ -493,7 +493,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Regulates minimum speed of traffic. Do not drive below this speed.',
       'difficulty_level': 2,
-      'image_url': 'assets/individual_signs/To regulate minimum speed of traffic. Do not drive.png',
+      'image_url': 'assets/individual_signs/COMMAND SIGNS/To regulate minimum speed of traffic. Do not drive.png',
     },
 
     // Warning Signs
@@ -510,7 +510,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 1,
       'explanation': 'Warning sign indicating a roundabout (traffic circle) is ahead.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/Traffic circle ahead ( mini circle or round about)..png',
+      'image_url': 'assets/individual_signs/CHANGES IN VEHICLE MOVEMENT AHEAD/Traffic circle ahead (mini circle or round about).png',
     },
     {
       'category': 'road_signs',
@@ -525,7 +525,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Indicates there is a single carriageway ahead for use by vehicles from both directions.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To indicate that there is a one-way carria.png',
+      'image_url': 'assets/individual_signs/COMMAND SIGNS/To indicate that you must move in a clockwise direction at the junction.png',
     },
     {
       'category': 'road_signs',
@@ -540,7 +540,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Indicates that you must move in a clockwise direction at the junction.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To indicate that you must move in a clockwise direction at the junction.png',
+      'image_url': 'assets/individual_signs/COMMAND SIGNS/To indicate that you must move in a clockwise direction at the junction.png',
     },
     {
       'category': 'road_signs',
@@ -555,13 +555,347 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0,
       'explanation': 'Indicates that you must switch on your headlights.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/To indicate that you must switch on your headlight.png',
+      'image_url': 'assets/individual_signs/COMMAND SIGNS/To indicate that you must switch on your headlight.png',
+    },
+    
+    // New questions for uncovered categories
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this residential area sign indicate?',
+      'options': [
+        {'text': 'Speed limit of 60km/h applies'},
+        {'text': 'Pedestrians have right of way at all times'},
+        {'text': 'Special rules apply including reduced speed limits'},
+        {'text': 'No parking allowed at any time'}
+      ],
+      'correct_index': 2,
+      'explanation': 'Residential area signs indicate that special rules apply including reduced speed limits and pedestrians have right of way.',
+      'difficulty_level': 2,
+      'image_url': 'assets/individual_signs/COMPREHENSIVE SIGNS/Residential area.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What rules apply when you see this freeway sign?',
+      'options': [
+        {'text': 'No pedestrians, animals, or bicycles allowed'},
+        {'text': 'Speed limit of 120km/h applies'},
+        {'text': 'Special freeway rules including no stopping'},
+        {'text': 'All of the above'}
+      ],
+      'correct_index': 3,
+      'explanation': 'Freeway signs indicate that special rules apply including no pedestrians, animals, or bicycles, higher speed limits, and no stopping on the freeway.',
+      'difficulty_level': 2,
+      'image_url': 'assets/individual_signs/COMPREHENSIVE SIGNS/Dual-carriage freeway begins The following rules apply to all freeways.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this end of freeway sign indicate?',
+      'options': [
+        {'text': 'Freeway rules no longer apply'},
+        {'text': 'Speed limit increases to 140km/h'},
+        {'text': 'Toll road begins ahead'},
+        {'text': 'Freeway becomes a residential area'}
+      ],
+      'correct_index': 0,
+      'explanation': 'End of freeway signs indicate that freeway rules no longer apply and normal road rules resume.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DE-RESTRICTION SIGNS/End of dual carriage freeway and freeway rules no longer apply.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'When you see this sign, what does it mean regarding headlights?',
+      'options': [
+        {'text': 'You must switch on your headlights'},
+        {'text': 'You no longer need to drive with headlights switched on'},
+        {'text': 'Headlights must be on high beam'},
+        {'text': 'Headlights are prohibited'}
+      ],
+      'correct_index': 1,
+      'explanation': 'This sign indicates that the requirement to drive with headlights switched on has ended.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DE-RESTRICTION SIGNS/You no longer need to drive with your headlights switched on.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this information center sign indicate?',
+      'options': [
+        {'text': 'Emergency services available'},
+        {'text': 'Tourist information available'},
+        {'text': 'Vehicle repair services'},
+        {'text': 'Police station ahead'}
+      ],
+      'correct_index': 1,
+      'explanation': 'Information center signs indicate where you can obtain information about the local area, typically for tourists.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/INFORMATION SIGNS/Information centre where you can obtain information about the local area.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What is the purpose of a park and ride sign?',
+      'options': [
+        {'text': 'To indicate free parking areas'},
+        {'text': 'To show where you can park and take public transport'},
+        {'text': 'To mark recreational parking areas'},
+        {'text': 'To indicate parking for disabled persons'}
+      ],
+      'correct_index': 1,
+      'explanation': 'Park and ride signs indicate locations where you can park your vehicle and transfer to public transportation for the remainder of your journey.',
+      'difficulty_level': 2,
+      'image_url': 'assets/individual_signs/INFORMATION SIGNS/Park and ride point. You can park your car here and take a train for the n leg of your journey..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What should you do when you see this children ahead sign?',
+      'options': [
+        {'text': 'Increase speed to pass quickly'},
+        {'text': 'Slow down and be prepared to stop'},
+        {'text': 'Sound your horn to warn children'},
+        {'text': 'Change lanes immediately'}
+      ],
+      'correct_index': 1,
+      'explanation': 'When you see a children ahead sign, you should slow down and be prepared to stop as children may suddenly enter the roadway.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/MOVING HAZARDS AHEAD/Children ahead..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this road works ahead sign indicate?',
+      'options': [
+        {'text': 'Road construction ahead, reduce speed'},
+        {'text': 'Road closed ahead, find alternative route'},
+        {'text': 'Temporary speed bump ahead'},
+        {'text': 'Road widening in progress'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Road works ahead signs warn drivers of construction activities ahead and to reduce speed for safety.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/MOVING HAZARDS AHEAD/Road works ahead..png',
+    },
+    
+    // Additional questions for priority categories
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this maximum speed limit sign indicate?',
+      'options': [
+        {'text': 'Recommended driving speed'},
+        {'text': 'Maximum allowed speed'},
+        {'text': 'Minimum required speed'},
+        {'text': 'Speed during poor visibility'}
+      ],
+      'correct_index': 1,
+      'explanation': 'This sign indicates the maximum speed limit allowed on this road section.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/LIMIT PROHIBITION SIGNS/Maximum speed limit allowed.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this airport direction sign indicate?',
+      'options': [
+        {'text': 'Airport is ahead in the direction shown'},
+        {'text': 'No airport access from this road'},
+        {'text': 'Airport parking area'},
+        {'text': 'Airport emergency services'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Direction signs show the route to follow to reach the indicated destination, in this case an airport.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DIRECTION SIGN SYMBOLS/Airport..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this crossroad ahead sign indicate?',
+      'options': [
+        {'text': 'Intersection with crossing traffic ahead'},
+        {'text': 'Road ends ahead'},
+        {'text': 'Roundabout ahead'},
+        {'text': 'Railway crossing ahead'}
+      ],
+      'correct_index': 0,
+      'explanation': 'This warning sign indicates a crossroad intersection ahead where traffic may be crossing your path.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/ROAD LAYOUT CHANGES AHEAD/Crossroad ahead.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this railway crossing ahead sign indicate?',
+      'options': [
+        {'text': 'Railway tracks crossing the road ahead'},
+        {'text': 'Train station ahead'},
+        {'text': 'Railway maintenance area'},
+        {'text': 'Railway museum ahead'}
+      ],
+      'correct_index': 0,
+      'explanation': 'This sign warns of railway tracks crossing the road ahead. Prepare to stop if necessary.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/ROAD SITUATIONS AHEAD/Railway crossing ahead. Obey any traffic control signals at the crossing..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this traffic signal hand sign indicate?',
+      'options': [
+        {'text': 'Stop for traffic approaching from behind the officer'},
+        {'text': 'Proceed with caution'},
+        {'text': 'Speed up to clear intersection'},
+        {'text': 'Make a U-turn'}
+      ],
+      'correct_index': 0,
+      'explanation': 'This hand signal by a traffic officer means stop for traffic approaching from behind the officer.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/TRAFFIC SIGNALS/Stop hand signal for traffic approaching from behind the officer.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What restriction does this time-based sign indicate?',
+      'options': [
+        {'text': 'Applies only during specific days and times shown'},
+        {'text': 'Applies 24 hours a day'},
+        {'text': 'Applies only on weekends'},
+        {'text': 'Applies only during holidays'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Time restriction signs apply only during the specific days and times indicated on the sign.',
+      'difficulty_level': 2,
+      'image_url': 'assets/individual_signs/SELECTIVE RESTRICTION SIGNS/Applies on the days and during the times shown.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this pedestrian crossing sign indicate?',
+      'options': [
+        {'text': 'Pedestrians have right of way when crossing'},
+        {'text': 'No pedestrians allowed in this area'},
+        {'text': 'Pedestrian overpass ahead'},
+        {'text': 'Pedestrian detour route'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Pedestrian crossing signs indicate areas where pedestrians have right of way when crossing the road.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/INFORMATION SIGNS/Information centre where you can obtain information about the local area.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this hospital sign indicate?',
+      'options': [
+        {'text': 'Hospital services available ahead'},
+        {'text': 'Emergency medical services only'},
+        {'text': 'No hospital access from this road'},
+        {'text': 'Hospital parking area'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Hospital signs indicate the direction to hospital services and facilities.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DIRECTION SIGN SYMBOLS/Airport..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this telephone sign indicate?',
+      'options': [
+        {'text': 'Public telephone available ahead'},
+        {'text': 'Emergency call box location'},
+        {'text': 'No cell phone use allowed'},
+        {'text': 'Telephone repair area'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Telephone signs indicate the location of public telephone services.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DIRECTION SIGN SYMBOLS/Border or customs post..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this first aid sign indicate?',
+      'options': [
+        {'text': 'First aid facilities available'},
+        {'text': 'Emergency medical training area'},
+        {'text': 'No medical services available'},
+        {'text': 'Ambulance station ahead'}
+      ],
+      'correct_index': 0,
+      'explanation': 'First aid signs indicate where first aid facilities and assistance are available.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DIRECTION SIGN SYMBOLS/City Centre or CBD..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this picnic area sign indicate?',
+      'options': [
+        {'text': 'Designated picnic and rest area'},
+        {'text': 'No picnicking allowed'},
+        {'text': 'Food services available'},
+        {'text': 'Camping area ahead'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Picnic area signs indicate designated areas for resting, picnicking, and enjoying outdoor activities.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DIRECTION SIGN SYMBOLS/Parking area..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this camping area sign indicate?',
+      'options': [
+        {'text': 'Designated camping facilities available'},
+        {'text': 'No camping allowed'},
+        {'text': 'Temporary camping only'},
+        {'text': 'Emergency shelter area'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Camping area signs indicate locations with designated camping facilities and services.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DIRECTION SIGN SYMBOLS/Railway station..png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this viewpoint sign indicate?',
+      'options': [
+        {'text': 'Scenic viewpoint or lookout area'},
+        {'text': 'No stopping for sightseeing'},
+        {'text': 'Dangerous cliff area'},
+        {'text': 'Photography prohibited area'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Viewpoint signs indicate scenic areas where you can safely stop to enjoy the view.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DIRECTION SIGN SYMBOLS/Shopping Centre.png',
+    },
+    {
+      'category': 'road_signs',
+      'learner_code': 1,
+      'question_text': 'What does this restaurant sign indicate?',
+      'options': [
+        {'text': 'Food and refreshment services available'},
+        {'text': 'No food allowed in vehicles'},
+        {'text': 'Emergency food distribution'},
+        {'text': 'Restaurant parking only'}
+      ],
+      'correct_index': 0,
+      'explanation': 'Restaurant signs indicate the availability of food and refreshment services ahead.',
+      'difficulty_level': 1,
+      'image_url': 'assets/individual_signs/DIRECTION SIGN SYMBOLS/Toll plaza..png',
     },
   ],
-  'vehicle_controls': [
+  'vehicle_controls_code1': [
     // Code 1 - Motorcycle questions
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code1',
       'learner_code': 1,
       'question_text': 'To ride faster, you must use number...',
       'options': [
@@ -572,10 +906,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 4
       'explanation': 'Number 4 is the throttle control. To increase speed, gradually roll the throttle forward.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code1.png',
+      'image_url': 'assets/individual_signs/CODE 1/code1.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code1',
       'learner_code': 1,
       'question_text': 'To turn you must use number',
       'options': [
@@ -586,10 +920,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0, // A. 8
       'explanation': 'Number 8 is the steering. To turn, lean the motorcycle and gently counter-steer in the desired direction.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code1.png',
+      'image_url': 'assets/individual_signs/CODE 1/code1.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code1',
       'learner_code': 1,
       'question_text': 'To stop you must use number...',
       'options': [
@@ -600,10 +934,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 1 and 2
       'explanation': 'Number 1 is front brake, number 2 is rear brake. Use both brakes together for safe stopping.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code1.png',
+      'image_url': 'assets/individual_signs/CODE 1/code1.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code1',
       'learner_code': 1,
       'question_text': 'To change gears, you must use numbers...',
       'options': [
@@ -614,10 +948,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 1 and 2
       'explanation': 'Number 1 is clutch, number 2 is gear lever. Use clutch and gear lever together to change gears.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code1.png',
+      'image_url': 'assets/individual_signs/CODE 1/code1.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code1',
       'learner_code': 1,
       'question_text': 'To indicate that you are going to turn you must use number...',
       'options': [
@@ -628,10 +962,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0, // A. 6
       'explanation': 'Number 6 is the indicator switch. Use it to signal your intention to turn left or right.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code1.png',
+      'image_url': 'assets/individual_signs/CODE 1/code1.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code1',
       'learner_code': 1,
       'question_text': 'What controls must you use when you are going to make a sharp turn?',
       'options': [
@@ -642,10 +976,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 1,2,3,4,6 and 8 only
       'explanation': 'For sharp turns: clutch (1), brakes (2), horn (3), throttle (4), indicators (6), and steering (8).',
       'difficulty_level': 2,
-      'image_url': 'assets/individual_signs/code1.png',
+      'image_url': 'assets/individual_signs/CODE 1/code1.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code1',
       'learner_code': 1,
       'question_text': 'What controls must you never use in combination?',
       'options': [
@@ -656,12 +990,14 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 1, // B. 4 and 8
       'explanation': 'Never use throttle (4) and steering (8) aggressively together as this can cause loss of control.',
       'difficulty_level': 2,
-      'image_url': 'assets/individual_signs/code1.png',
+      'image_url': 'assets/individual_signs/CODE 1/code1.png',
     },
 
+  ],
+  'vehicle_controls_code2': [
     // Code 2 - Light motor vehicle questions
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code2',
       'learner_code': 2,
       'question_text': 'To select a gear you must use numbers...',
       'options': [
@@ -672,10 +1008,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 6&8
       'explanation': 'Number 6 is clutch, number 8 is gear lever. Use together to select gears in manual transmission.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code2.png',
+      'image_url': 'assets/individual_signs/CODE 2/code2.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code2',
       'learner_code': 2,
       'question_text': 'To stop your vehicle, you must use number...',
       'options': [
@@ -686,10 +1022,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0, // A. 9
       'explanation': 'Number 9 is the foot brake. Use it to slow down and stop the vehicle.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code2.png',
+      'image_url': 'assets/individual_signs/CODE 2/code2.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code2',
       'learner_code': 2,
       'question_text': 'Number...is not found in an automatic vehicle',
       'options': [
@@ -700,10 +1036,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 8
       'explanation': 'Number 8 is the gear lever, which is not needed in automatic transmission vehicles.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code2.png',
+      'image_url': 'assets/individual_signs/CODE 2/code2.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code2',
       'learner_code': 2,
       'question_text': 'To turn, number...is used',
       'options': [
@@ -714,10 +1050,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0, // A. 4
       'explanation': 'Number 4 is the steering wheel. Use it to turn the vehicle left or right.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code2.png',
+      'image_url': 'assets/individual_signs/CODE 2/code2.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code2',
       'learner_code': 2,
       'question_text': 'To ensure that your parked vehicle does not move you must use number..',
       'options': [
@@ -728,10 +1064,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0, // A. 7
       'explanation': 'Number 7 is the handbrake. Engage it to prevent the vehicle from moving when parked.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code2.png',
+      'image_url': 'assets/individual_signs/CODE 2/code2.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code2',
       'learner_code': 2,
       'question_text': 'To accelerate your vehicle you must use number',
       'options': [
@@ -742,10 +1078,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 10
       'explanation': 'Number 10 is the accelerator pedal. Press it to increase speed.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code2.png',
+      'image_url': 'assets/individual_signs/CODE 2/code2.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code2',
       'learner_code': 2,
       'question_text': 'What controls must you use when you are going to turn sharp',
       'options': [
@@ -756,12 +1092,12 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 1,3,4,5,6,8,9 and 10 only
       'explanation': 'For sharp turns: indicators (1), horn (3), steering (4), lights (5), clutch (6), gear (8), brake (9), accelerator (10).',
       'difficulty_level': 2,
-      'image_url': 'assets/individual_signs/code2.png',
+      'image_url': 'assets/individual_signs/CODE 2/code2.png',
     },
 
     // Code 3 - Heavy motor vehicle questions
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code3',
       'learner_code': 3,
       'question_text': 'To select a gear, you must use numbers...',
       'options': [
@@ -772,10 +1108,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 6&8
       'explanation': 'Number 6 is clutch, number 8 is gear lever. Use together to select gears in heavy vehicles.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code3.png',
+      'image_url': 'assets/individual_signs/CODE 3/code3.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code3',
       'learner_code': 3,
       'question_text': 'To stop your vehicle you must use number...',
       'options': [
@@ -786,10 +1122,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0, // A. 9
       'explanation': 'Number 9 is the foot brake. Use it to slow down and stop heavy vehicles.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code3.png',
+      'image_url': 'assets/individual_signs/CODE 3/code3.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code3',
       'learner_code': 3,
       'question_text': 'To turn your vehicle, number... is used',
       'options': [
@@ -800,10 +1136,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 1, // B. 4
       'explanation': 'Number 4 is the steering wheel. Use it to turn heavy vehicles left or right.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code3.png',
+      'image_url': 'assets/individual_signs/CODE 3/code3.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code3',
       'learner_code': 3,
       'question_text': 'To ensure that your parked vehicle does not move, use number...',
       'options': [
@@ -814,10 +1150,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 0, // A. 7
       'explanation': 'Number 7 is the parking brake. Engage it to secure heavy vehicles when parked.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code3.png',
+      'image_url': 'assets/individual_signs/CODE 3/code3.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code3',
       'learner_code': 3,
       'question_text': 'To accelerate your vehicle you must use number...',
       'options': [
@@ -828,10 +1164,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 10
       'explanation': 'Number 10 is the accelerator pedal. Press it to increase speed in heavy vehicles.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code3.png',
+      'image_url': 'assets/individual_signs/CODE 3/code3.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code3',
       'learner_code': 3,
       'question_text': 'What controls must you use when you are going to turn sharp?',
       'options': [
@@ -842,10 +1178,10 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 2, // C. 1, 3, 4, 5, 6, 8 and 9 only
       'explanation': 'For sharp turns in heavy vehicles: indicators (1), horn (3), steering (4), lights (5), clutch (6), gear (8), brake (9).',
       'difficulty_level': 2,
-      'image_url': 'assets/individual_signs/code3.png',
+      'image_url': 'assets/individual_signs/CODE 3/code3.png',
     },
     {
-      'category': 'vehicle_controls',
+      'category': 'vehicle_controls_code3',
       'learner_code': 3,
       'question_text': 'To indicate that you are going to turn, you must use number...',
       'options': [
@@ -856,7 +1192,7 @@ Map<String, List<Map<String, dynamic>>> k53QuestionDatabase = {
       'correct_index': 1, // B. 5
       'explanation': 'Number 5 is the indicator switch. Use it to signal your intention to turn left or right.',
       'difficulty_level': 1,
-      'image_url': 'assets/individual_signs/code3.png',
+      'image_url': 'assets/individual_signs/CODE 3/code3.png',
     },
   ],
   'general_knowledge': [
@@ -911,7 +1247,9 @@ List<Map<String, dynamic>> getAllK53Questions() {
   return [
     ...k53QuestionDatabase['rules_of_road']!,
     ...k53QuestionDatabase['road_signs']!,
-    ...k53QuestionDatabase['vehicle_controls']!,
+    ...k53QuestionDatabase['vehicle_controls_code1']!,
+    ...k53QuestionDatabase['vehicle_controls_code2']!,
+    ...k53QuestionDatabase['vehicle_controls_code3']!,
     ...k53QuestionDatabase['general_knowledge']!,
   ];
 }

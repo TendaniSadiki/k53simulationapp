@@ -98,7 +98,9 @@ void main() async {
     print('Question counts by category:');
     print('- Rules of the Road: ${getQuestionsByCategory('rules_of_road').length} questions');
     print('- Road Signs: ${getQuestionsByCategory('road_signs').length} questions');
-    print('- Vehicle Controls: ${getQuestionsByCategory('vehicle_controls').length} questions');
+    print('- Vehicle Controls - Code 1: ${getQuestionsByCategory('vehicle_controls_code1').length} questions');
+    print('- Vehicle Controls - Code 2: ${getQuestionsByCategory('vehicle_controls_code2').length} questions');
+    print('- Vehicle Controls - Code 3: ${getQuestionsByCategory('vehicle_controls_code3').length} questions');
     print('- General Knowledge: ${getQuestionsByCategory('general_knowledge').length} questions');
     print('- Total: ${allQuestions.length} questions');
     print('Starting database insertion...\n');
@@ -148,7 +150,7 @@ void main() async {
       print('⚠️  WARNING: Only $insertedCount of ${allQuestions.length} questions were inserted!');
       print('   This may indicate database constraint violations or duplicate questions.');
     }
-    print('\nCategories covered: Rules of the Road, Road Signs, Vehicle Controls, General Knowledge');
+    print('\nCategories covered: Rules of the Road, Road Signs, Vehicle Controls (Code 1, Code 2, Code 3), General Knowledge');
     print('Total questions: ${allQuestions.length} (Complete K53 Official)');
   } catch (e) {
     print('Error seeding questions: $e');

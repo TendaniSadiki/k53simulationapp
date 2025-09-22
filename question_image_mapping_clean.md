@@ -20,23 +20,23 @@ This document maps Evolve Driving Academy questions to appropriate road sign ima
 
 ### Parking Questions
 - **Q15**: "You are not allowed to stop..." (mentions pavement/parking)
-  - Image: `Parking only if you pay the parking fee.png` (parking regulation sign)
+  - Image: `SELECTIVE RESTRICTION SIGNS/Parking only if you pay the parking fee.png` (parking regulation sign)
 
 - **Q16**: "You are not allowed to stop..." (parking restrictions)
   - Image: `No stopping to ensure traffic flow and prevent dri.png` (no stopping sign)
 
 - **Q37**: "Where may you legally stop with your vehicle?"
-  - Image: `Parking_30min_Week_09-16_Sat_08-13.png.png` (time-restricted parking)
+  - Image: `SELECTIVE RESTRICTION SIGNS/Parking_30min_Week_09-16_Sat_08-13.png.png` (time-restricted parking)
 
 - **Q43**: "In which case is it permitted to travel with only the parking lights..."
-  - Image: `Applies at night only.png` or `Applies during day time only.png`
+  - Image: `SELECTIVE RESTRICTION SIGNS/Applies at night only.png` or `SELECTIVE RESTRICTION SIGNS/Applies during day time only.png`
 
 ### Overtaking Questions
 - **Q3**: "When may you not overtake another vehicle?"
-  - Image: `Overtaking prohibited for the next 2km.png` (overtaking prohibition)
+  - Image: `SELECTIVE RESTRICTION SIGNS/Overtaking prohibited for the next 2km.png` (overtaking prohibition)
 
 - **Q18**: "You may overtake another vehicle on the left hand side..."
-  - Image: `No over taking vehicles by goods vehicles for the next 500m.png`
+  - Image: `SELECTIVE RESTRICTION SIGNS/No over taking vehicles by goods vehicles for the next 500m.png`
 
 ### Special Area Questions
 - **Q13**: "What is the longest period that a vehicle may be parked..."
@@ -50,10 +50,10 @@ This document maps Evolve Driving Academy questions to appropriate road sign ima
 
 ### Sign Type Questions
 - **Q49**: "A Temporary sign...?"
-  - Image: `Applies for the next 5km.png` (temporary/distance-based signs)
+  - Image: `SELECTIVE RESTRICTION SIGNS/Applies for the next 5km.png` (temporary/distance-based signs)
 
 - **Q71**: "The use of a temporary sign implies that for some reason..."
-  - Image: `Applies on the days and during the times shown.png` (conditional signs)
+  - Image: `SELECTIVE RESTRICTION SIGNS/Applies on the days and during the times shown.png` (conditional signs)
 
 ## Image Naming Conventions
 

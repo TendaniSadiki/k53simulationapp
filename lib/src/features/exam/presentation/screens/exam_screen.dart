@@ -43,6 +43,9 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
     // Listen for exam completion and navigate to review screen
     final examState = ref.watch(examProvider);
     if (examState.isCompleted && !_hasNavigatedToReview) {
+      if (kDebugMode) {
+        print('DEBUG: Exam completed detected in didChangeDependencies, navigating to results');
+      }
       _hasNavigatedToReview = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -57,10 +60,24 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
 
     setState(() => _isStarting = true);
     
+    String? finalCategory = _selectedCategory;
+    int? finalLearnerCode = _selectedLearnerCode;
+
+    // If vehicle controls is selected but no specific code is chosen, prompt user
+    if (_selectedCategory == 'vehicle_controls' && _selectedLearnerCode == null) {
+      final code = await _showVehicleCodeSelector();
+      if (code == null) {
+        // User cancelled the code selection
+        setState(() => _isStarting = false);
+        return;
+      }
+      finalLearnerCode = code;
+    }
+
     final notifier = ref.read(examProvider.notifier);
     await notifier.loadExamQuestions(
-      category: _selectedCategory,
-      learnerCode: _selectedLearnerCode,
+      category: finalCategory,
+      learnerCode: finalLearnerCode,
       questionCount: _questionCount,
     );
 
@@ -73,12 +90,40 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
       AnalyticsService.trackUserEngagement(
         eventName: 'exam_started',
         properties: {
-          'category': _selectedCategory,
-          'learner_code': _selectedLearnerCode,
+          'category': finalCategory,
+          'learner_code': finalLearnerCode,
           'question_count': _questionCount,
         },
       );
     }
+  }
+
+  Future<int?> _showVehicleCodeSelector() async {
+    return showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Vehicle Code'),
+        content: const Text('Please select the type of vehicle controls you want to practice:'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(1),
+            child: const Text('Code 1 (Motorcycles)'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(2),
+            child: const Text('Code 2 (Light Vehicles)'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(3),
+            child: const Text('Code 3 (Heavy Vehicles)'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCategorySelector() {
@@ -476,6 +521,16 @@ class _ExamScreenState extends ConsumerState<ExamScreen> {
   @override
   Widget build(BuildContext context) {
     final examState = ref.watch(examProvider);
+    
+    // Add navigation trigger in build method as well for reliability
+    if (examState.isCompleted && !_hasNavigatedToReview) {
+      _hasNavigatedToReview = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.go('/exam/results');
+        }
+      });
+    }
     
     // Debug: Check if current question has image URL
     if (kDebugMode && examState.currentQuestion?.imageUrl != null) {

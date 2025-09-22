@@ -30,7 +30,7 @@ The following road sign images are available in `assets/individual_signs/`:
 
 **Q3 - Overtaking Restrictions**
 - **Question**: "When may you not overtake another vehicle?... When you ..."
-- **Image**: `assets/individual_signs/Overtaking prohibited for the next 2km.png`
+- **Image**: `assets/individual_signs/SELECTIVE RESTRICTION SIGNS/Overtaking prohibited for the next 2km.png`
 - **Reason**: Question deals with overtaking prohibitions
 
 **Q6 - Yield at Intersections**
@@ -55,7 +55,7 @@ The following road sign images are available in `assets/individual_signs/`:
 
 **Q18 - Overtaking Permissions**
 - **Question**: "You may overtake another vehicle on the left hand side..."
-- **Image**: `assets/individual_signs/No over taking vehicles by goods vehicles for the next 500m.png`
+- **Image**: `assets/individual_signs/SELECTIVE RESTRICTION SIGNS/No over taking vehicles by goods vehicles for the next 500m.png`
 - **Reason**: Overtaking regulations with specific restrictions
 
 ### General Mapping Rules

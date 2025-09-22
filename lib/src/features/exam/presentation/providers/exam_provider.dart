@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/question.dart';
 import '../../../../core/models/session.dart' as session_models;
@@ -390,6 +391,10 @@ class ExamNotifier extends StateNotifier<ExamState> {
   Future<void> _completeExam() async {
     if (state.isCompleted) return;
     
+    if (kDebugMode) {
+      print('DEBUG: _completeExam() called - setting isCompleted to true');
+    }
+    
     // Stop timer immediately to prevent further state changes
     _timerService?.dispose();
     state = state.copyWith(isCompleted: true);
@@ -543,7 +548,13 @@ class ExamNotifier extends StateNotifier<ExamState> {
         },
       );
 
-      await SessionDatabaseService.createSession(session, state.questions);
+      // Check if session already exists before creating
+      final existingSession = await SessionDatabaseService.getSession(state.sessionId!);
+      if (existingSession == null) {
+        await SessionDatabaseService.createSession(session, state.questions);
+      } else {
+        await SessionDatabaseService.updateSession(session);
+      }
       
       // Also update session progress for real-time tracking
       await SessionRecoveryService.updateSessionProgress(

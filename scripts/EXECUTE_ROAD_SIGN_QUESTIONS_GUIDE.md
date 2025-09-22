@@ -1,153 +1,93 @@
 # Road Sign Questions Execution Guide
 
+## Overview
+This guide provides instructions for executing the SQL files to populate the K53 test database with road sign questions and their corresponding images.
+
 ## Prerequisites
-- Access to your Supabase project at https://app.supabase.com/
-- Your Supabase URL and service role key from `.env` file
+- Supabase database set up with the correct schema
+- Database tables created (run `scripts/check_and_create_tables.sql` first if needed)
 
-## Step 1: Check and Create Tables (If Needed)
+## Execution Order
 
-First, run the table verification script to ensure the questions table exists:
-
-### Method A: Via Supabase Dashboard (Recommended)
-1. Go to [Supabase Dashboard](https://app.supabase.com/)
-2. Select your project
-3. Navigate to "SQL Editor"
-4. Copy and paste the entire content from [`scripts/check_and_create_tables.sql`](scripts/check_and_create_tables.sql:1)
-5. Click "Run" to execute
-
-### Method B: Using Supabase CLI
-```bash
-supabase db execute --file scripts/check_and_create_tables.sql
+### 1. First: Create Database Tables (if not already created)
+```sql
+-- Run this in Supabase SQL Editor
+\i scripts/check_and_create_tables.sql
 ```
 
-## Step 2: Execute Road Sign Questions
-
-After verifying the table exists, execute the road sign questions:
-
-### Method A: Via Supabase Dashboard (Recommended)
-1. In the SQL Editor, copy and paste the entire content from [`scripts/road_sign_questions_output.sql`](scripts/road_sign_questions_output.sql:1)
-2. Click "Run" to execute the SQL
-
-### Method B: Using Supabase CLI
-```bash
-supabase db execute --file scripts/road_sign_questions_output.sql
+### 2. Second: Insert Road Sign Questions
+```sql
+-- Run this in Supabase SQL Editor  
+\i scripts/road_sign_questions_output_fixed.sql
 ```
 
-## Step 3: Verify Execution
+### 3. Third: Insert Rules of the Road Questions
+```sql
+-- Run this in Supabase SQL Editor
+\i scripts/seed_evolve_questions_with_images.sql
+```
 
-After execution, verify the questions were inserted correctly:
+## File Details
+
+### `scripts/road_sign_questions_output_fixed.sql`
+- **Purpose**: Inserts 19 road sign specific questions
+- **Categories**: regulatory, prohibition, command, warning, freeway, informational, mass_dimension
+- **Images**: 12 questions have associated images, 7 use NULL (no image available)
+
+### `scripts/seed_evolve_questions_with_images.sql`  
+- **Purpose**: Inserts 72 rules of the road questions + vehicle controls
+- **Categories**: rules_of_road, vehicle_controls
+- **Images**: 2 questions have associated images, 70 use NULL (no image available)
+
+## Verification
+
+After executing the SQL files, verify the insertions:
 
 ```sql
--- Check total road sign questions
-SELECT COUNT(*) FROM questions WHERE category = 'road_signs';
-
--- View sample questions with images
-SELECT id, question_text, image_url 
+-- Check road sign questions
+SELECT category, COUNT(*) as question_count 
 FROM questions 
-WHERE category = 'road_signs' 
-AND image_url IS NOT NULL 
-LIMIT 5;
+WHERE category IN ('regulatory', 'prohibition', 'command', 'warning', 'freeway', 'informational', 'mass_dimension')
+GROUP BY category;
 
--- Check all inserted questions
-SELECT id, category, learner_code, question_text, image_url
-FROM questions 
-WHERE category = 'road_signs'
-ORDER BY created_at DESC;
+-- Check total questions with images
+SELECT COUNT(*) as questions_with_images FROM questions WHERE image_url IS NOT NULL;
+SELECT COUNT(*) as total_questions FROM questions;
 ```
-
-## Troubleshooting
-
-### Common Issues:
-
-1. **"relation 'questions' does not exist"**:
-   - Run the [`scripts/check_and_create_tables.sql`](scripts/check_and_create_tables.sql:1) first
-   - This will create the table if it doesn't exist
-
-2. **Permission denied**:
-   - Ensure you're using the service role key for database modifications
-   - Check your RLS (Row Level Security) policies
-
-3. **JSON parsing error**:
-   - Verify the JSON format in the options field
-   - Ensure proper escaping of special characters
-
-4. **Image path issues**:
-   - Confirm all image paths exist in the `assets/individual_signs/` directory
-   - Paths should match exactly (case-sensitive)
-
-### If migrations haven't been applied:
-
-If your database is completely empty, you may need to run all migrations:
-
-1. **Run initial schema**:
-   ```sql
-   -- Copy and paste the content from:
-   -- supabase/migrations/001_initial_schema.sql
-   -- supabase/migrations/004_add_image_url_column.sql
-   ```
-
-2. **Apply RLS policies**:
-   - The table creation script includes basic RLS policies
-   - For full policies, refer to the migration files
-
-## Alternative: Manual Table Creation
-
-If you prefer to create the table manually:
-
-```sql
--- Create questions table
-CREATE TABLE questions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    category TEXT NOT NULL,
-    learner_code INTEGER NOT NULL,
-    question_text TEXT NOT NULL,
-    options JSONB NOT NULL,
-    correct_index INTEGER NOT NULL,
-    explanation TEXT NOT NULL,
-    version INTEGER DEFAULT 1,
-    is_active BOOLEAN DEFAULT TRUE,
-    difficulty_level INTEGER DEFAULT 1 CHECK (difficulty_level BETWEEN 1 AND 5),
-    image_url TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create indexes
-CREATE INDEX idx_questions_category ON questions(category);
-CREATE INDEX idx_questions_learner_code ON questions(learner_code);
-CREATE INDEX idx_questions_image_url ON questions(image_url) WHERE image_url IS NOT NULL;
-
--- Enable RLS
-ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
-
--- Basic RLS policies
-CREATE POLICY "Authenticated users can read questions" ON questions
-    FOR SELECT USING (auth.role() = 'authenticated' AND is_active = true);
-    
-CREATE POLICY "Allow question seeding" ON questions
-    FOR INSERT TO authenticated WITH CHECK (true);
-```
-
-## Next Steps
-
-After successful insertion:
-1. Test the questions in your Flutter app
-2. Verify images load correctly in the offline test screen
-3. Check that the new road sign questions appear in study and exam modes
-4. Consider adding more questions from the available 587 road sign images
-
-## Support
-
-If you encounter issues:
-- Check Supabase documentation: https://supabase.com/docs
-- Review the migration files in `supabase/migrations/`
-- Verify database connection settings in your `.env` file
 
 ## Expected Results
 
-After successful execution, you should have:
-- ✅ Questions table created (if it didn't exist)
-- ✅ 19 new road sign questions inserted
-- ✅ All questions with proper image_url references
-- ✅ Proper categorization and difficulty levels
-- ✅ Working RLS policies for application access
+- **Total Questions**: ~83 questions (based on current analytics: 49 road signs + 25 vehicle controls + 7 general knowledge + 2 rules of road)
+- **Questions with Images**: 14 questions with verified working images
+- **Questions without Images**: 69 questions (using NULL values appropriately)
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Image Loading Errors**: If images don't load in the app, verify:
+   - All image paths in the database point to existing files
+   - The Flutter app has the correct asset declarations in `pubspec.yaml`
+
+2. **Database Errors**: If you get foreign key or constraint errors:
+   - Make sure to run the table creation script first
+   - Check that all required tables exist
+
+3. **Duplicate Questions**: If questions are duplicated:
+   - Clear the questions table before re-running: `DELETE FROM questions;`
+
+### Verification Script
+
+Use the provided Dart script to verify all image paths:
+
+```bash
+dart run scripts/verify_sql_image_paths.dart
+```
+
+This will check that all image URLs in the SQL files point to actual files that exist.
+
+## Notes
+
+- The image paths now use the organized subfolder structure (`assets/individual_signs/CATEGORY/filename.png`)
+- Some questions don't have corresponding images and use NULL values
+- All image paths have been verified to exist in the current file structure

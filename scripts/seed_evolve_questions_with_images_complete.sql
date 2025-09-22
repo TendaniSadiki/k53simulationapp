@@ -42,7 +42,7 @@ FROM (
     ('rules_of_road', 1, 'You may not obtain a learner''s licence if...', '[{"text": "You already have a licence that authorises the driving of the same vehicle class"}, {"text": "You are declared unfit to obtain a driving licence for a certain period and that period still prevails"}, {"text": "Your licence was suspended temporarily and the suspension has not yet expired"}, {"text": "All of the above are correct"}]'::jsonb, 3, 'All conditions prevent obtaining a learner''s license: existing license for same class, declared unfit period, or active suspension.', 2, NULL),
     
     -- Q6 - Yield sign
-    ('rules_of_road', 1, 'At an intersection...', '[{"text": "Vehicles have the right of way over pedestrians"}, {"text": "You must yield to oncoming traffic if you want to turn right"}, {"text": "You can use a stop sign as a yield sign if there is no other traffic"}]'::jsonb, 1, 'When turning right at an intersection, you must yield to oncoming traffic. Pedestrians have right of way at crossings.', 1, NULL),
+    ('rules_of_road', 1, 'At an intersection...', '[{"text": "Vehicles have the right of way over pedestrians"}, {"text": "You must yield to oncoming traffic if you want to turn right"}, {"text": "You can use a stop sign as a yield sign if there is no other traffic"}]'::jsonb, 1, 'When turning right at an intersection, you must yield to oncoming traffic. Pedestrians have right of way at crossings.', 1, 'assets/individual_signs/REGULATORY SIGNS/Yield sign.png'),
     
     -- Q7
     ('rules_of_road', 1, 'The licence for your vehicle (clearance certificate) is valid for...', '[{"text": "12 months"}, {"text": "90 days"}, {"text": "21 days"}]'::jsonb, 0, 'A vehicle license (clearance certificate) is typically valid for 12 months and must be renewed annually.', 1, NULL),
@@ -62,23 +62,23 @@ FROM (
     -- Q12
     ('rules_of_road', 1, 'The furthest that your vehicle''s dim light may shine in front of you, is...m', '[{"text": "45"}, {"text": "100"}, {"text": "150"}]'::jsonb, 0, 'Dim (dipped) headlights should illuminate the road for approximately 45 meters ahead of your vehicle.', 1, NULL),
     
-    -- Q13
-    ('rules_of_road', 1, 'What is the longest period that a vehicle may be parked on one place on a road outside urban areas?', '[{"text": "7 days"}, {"text": "48 hours"}, {"text": "24 hours"}]'::jsonb, 0, 'Outside urban areas, a vehicle may be parked in one place for up to 7 days unless otherwise prohibited.', 1, NULL),
+    -- Q13 - Parking duration
+    ('rules_of_road', 1, 'What is the longest period that a vehicle may be parked on one place on a road outside urban areas?', '[{"text": "7 days"}, {"text": "48 hours"}, {"text": "24 hours"}]'::jsonb, 0, 'Outside urban areas, a vehicle may be parked in one place for up to 7 days unless otherwise prohibited.', 1, 'assets/individual_signs/REGULATORY SIGNS/Residential area.png'),
     
     -- Q14
     ('rules_of_road', 1, 'At an intersection...', '[{"text": "You can pass another vehicle waiting to turn right on his left side by going off the road"}, {"text": "You can stop in it to off load passengers"}, {"text": "Pedestrians who are already crossing the road when the red man signal starts showing, have right of way"}]'::jsonb, 2, 'Pedestrians already crossing when the signal changes to red have right of way to complete their crossing safely.', 2, NULL),
     
-    -- Q15
-    ('rules_of_road', 1, 'You are not allowed to stop...', '[{"text": "On the pavement"}, {"text": "With the front of your vehicle facing oncoming traffic"}, {"text": "Next to any obstruction in the road"}]'::jsonb, 0, 'Stopping on the pavement (sidewalk) is prohibited as it obstructs pedestrian access.', 1, NULL),
+    -- Q15 - No stopping
+    ('rules_of_road', 1, 'You are not allowed to stop...', '[{"text": "On the pavement"}, {"text": "With the front of your vehicle facing oncoming traffic"}, {"text": "Next to any obstruction in the road"}]'::jsonb, 0, 'Stopping on the pavement (sidewalk) is prohibited as it obstructs pedestrian access.', 1, 'assets/individual_signs/REGULATORY SIGNS/No stopping to ensure traffic flow and prevent dri.png'),
     
-    -- Q16
-    ('rules_of_road', 1, 'You are not allowed to stop...', '[{"text": "Where you are also prohibited to park"}, {"text": "5m from a bridge"}, {"text": "Opposite a vehicle, where the roadway is 10m wide"}]'::jsonb, 0, 'If an area is designated as no parking, it also means no stopping. Other restrictions may have specific distances.', 2, NULL),
+    -- Q16 - No stopping restrictions
+    ('rules_of_road', 1, 'You are not allowed to stop...', '[{"text": "Where you are also prohibited to park"}, {"text": "5m from a bridge"}, {"text": "Opposite a vehicle, where the roadway is 10m wide"}]'::jsonb, 0, 'If an area is designated as no parking, it also means no stopping. Other restrictions may have specific distances.', 2, 'assets/individual_signs/REGULATORY SIGNS/No stopping to ensure traffic flow and prevent dri.png'),
     
     -- Q17
     ('rules_of_road', 1, 'You may pass another vehicle on the left-hand side if it...', '[{"text": "Indicates that it is going to turn right"}, {"text": "Drives on the right-hand side of a road with a shoulder were you can pass"}, {"text": "Drives in a town in the right hand lane with 2 lanes in the same direction"}, {"text": "Only (i) and (iii) are correct"}]'::jsonb, 3, 'You may pass on the left when a vehicle is turning right or when in multi-lane roads with designated lanes.', 2, NULL),
     
-    -- Q18
-    ('rules_of_road', 1, 'You may overtake another vehicle on the left hand side...', '[{"text": "When that vehicle is going to turn right and the road is wide enough that it is not necessary to drive on the shoulder"}, {"text": "Where the road has 2 lanes for traffic in the same direction"}, {"text": "If a police officer instructs you to do so"}, {"text": "All of the above are correct"}]'::jsonb, 3, 'All scenarios allow overtaking on the left: vehicle turning right, multi-lane roads, or when directed by authorities.', 2, NULL),
+    -- Q18 - Overtaking restrictions
+    ('rules_of_road', 1, 'You may overtake another vehicle on the left hand side...', '[{"text": "When that vehicle is going to turn right and the road is wide enough that it is not necessary to drive on the shoulder"}, {"text": "Where the road has 2 lanes for traffic in the same direction"}, {"text": "If a police officer instructs you to do so"}, {"text": "All of the above are correct"}]'::jsonb, 3, 'All scenarios allow overtaking on the left: vehicle turning right, multi-lane roads, or when directed by authorities.', 2, 'assets/individual_signs/SELECTIVE RESTRICTION SIGNS/No over taking vehicles by goods vehicles for the next 500m.png'),
     
     -- Q19
     ('rules_of_road', 1, 'You may on a public road...', '[{"text": "Pass another vehicle turning right, on it''s left-hand side without driving on the shoulder of the road"}, {"text": "Pass another vehicle at any place on the left-hand side if it is turning right"}, {"text": "Not pass any vehicle on the left-hand side"}]'::jsonb, 0, 'You may pass on the left of a vehicle turning right, provided you can do so without driving on the shoulder.', 2, NULL),
@@ -108,4 +108,16 @@ FROM (
     ('rules_of_road', 1, 'The fastest speed at which you may tow a vehicle with a rope is .. km/h', '[{"text": "60"}, {"text": "45"}, {"text": "30"}]'::jsonb, 2, 'When towing with a rope, the maximum speed is 30 km/h for safety reasons.', 1, NULL),
     
     -- Q28
-    ('rules_of_road', 1, 'You may cross or enter a public road...', '[{"text": "If the road is clear of traffic for a short distance"}, {"text": "If the road is clear of traffic for a long distance"}, {"text": "If you can see that there is no traffic for a short distance"}]'::jsonb, 1, 'You may only cross or enter a public road if it is clear of traffic for a long distance to ensure safety.', 2, NULL),
+    ('rules_of_road', 1, 'You may cross or enter a public road...', '[{"text": "If the road is clear of traffic for a short distance"}, {"text": "If the road is clear of traffic for a long distance and it can be done without obstructing traffic"}, {"text": "In any manner as long as you use your indicators in time"}]'::jsonb, 1, 'Enter roads only when you have clear visibility for a sufficient distance and can do so without obstructing traffic.', 2, NULL),
+    
+    -- Q29
+    ('rules_of_road', 1, 'Your vehicle''s headlights must be switched on...', '[{"text": "At any time of the day when you can not see persons and vehicle''s 150m in front of you"}, {"text": "From sunset to sunrise"}, {"text": "When it rains and you cannot see vehicles 100m in front of you"}, {"text": "All of the above are correct"}]'::jsonb, 3, 'Headlights must be used from sunset to sunrise, in poor visibility (<150m), and when raining with visibility <100m.', 2, NULL),
+    
+    -- Q30
+    ('rules_of_road', 1, 'You may not drive into an intersection when...', '[{"text": "The robot (traffic signal) is yellow and you are already in the intersection"}, {"text": "The vehicle in front of you wants to turn right and the road is wide enough to pass on the left side"}, {"text": "There is not enough space in the intersection to turn right without blocking other traffic"}]'::jsonb, 2, 'Do not enter an intersection unless there is sufficient space to clear it without obstructing cross traffic.', 2, NULL),
+    
+    -- Q31
+    ('rules_of_road', 1, 'When you were involved in an accident you...', '[{"text": "Must immediately stop your vehicle"}, {"text": "Must determine the damage to the vehicles"}, {"text": "May refuse to give your name and address to anyone except the police"}, {"text": "Only (i) and (ii) are correct"}]'::jsonb, 3, 'After an accident, stop immediately and assess damage. You must provide details to other involved parties, not just police.', 2, NULL),
+    
+    -- Q32
+    ('rules_of_road', 1, 'When you were involved in an accident you...', '[{"text": "Must

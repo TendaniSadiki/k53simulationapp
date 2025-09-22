@@ -8,8 +8,8 @@ ALTER TABLE questions ADD COLUMN IF NOT EXISTS image_url TEXT;
 -- Rules of the Road questions that need images
 
 -- Q3 - Overtaking prohibition
-UPDATE questions 
-SET image_url = 'assets/individual_signs/Overtaking prohibited for the next 2km.png'
+UPDATE questions
+SET image_url = 'assets/individual_signs/SELECTIVE RESTRICTION SIGNS/Overtaking prohibited for the next 2km.png'
 WHERE question_text = 'When may you not overtake another vehicle?... When you ...'
 AND category = 'rules_of_road';
 
@@ -53,27 +53,27 @@ AND category = 'rules_of_road'
 AND explanation LIKE '%no parking%';
 
 -- Q18 - Overtaking prohibition
-UPDATE questions 
-SET image_url = 'assets/individual_signs/No over taking vehicles by goods vehicles for the next 500m.png'
+UPDATE questions
+SET image_url = 'assets/individual_signs/SELECTIVE RESTRICTION SIGNS/No over taking vehicles by goods vehicles for the next 500m.png'
 WHERE question_text = 'You may overtake another vehicle on the left hand side...'
 AND category = 'rules_of_road';
 
 -- Parking related questions
-UPDATE questions 
-SET image_url = 'assets/individual_signs/Parking only if you pay the parking fee.png'
+UPDATE questions
+SET image_url = 'assets/individual_signs/SELECTIVE RESTRICTION SIGNS/Parking only if you pay the parking fee.png'
 WHERE question_text LIKE '%parking%' 
 AND category = 'rules_of_road'
 AND image_url IS NULL;
 
-UPDATE questions 
-SET image_url = 'assets/individual_signs/Parking_30min_Week_09-16_Sat_08-13.png.png'
+UPDATE questions
+SET image_url = 'assets/individual_signs/SELECTIVE RESTRICTION SIGNS/Parking_30min_Week_09-16_Sat_08-13.png.png'
 WHERE question_text LIKE '%park%' 
 AND category = 'rules_of_road'
 AND image_url IS NULL;
 
 -- Additional road sign questions
-UPDATE questions 
-SET image_url = 'assets/individual_signs/Over taking vehicles is prohibited for the next 500m.png'
+UPDATE questions
+SET image_url = 'assets/individual_signs/SELECTIVE RESTRICTION SIGNS/Over taking vehicles is prohibited for the next 500m.png'
 WHERE question_text LIKE '%overtak%' 
 AND category = 'rules_of_road'
 AND image_url IS NULL;

@@ -1,71 +1,100 @@
 import 'dart:io';
-import 'package:path/path.dart' as path;
 
 void main() {
-  print('Verifying road sign image paths...\n');
-  
-  // List of expected image paths from the mapping
-  final expectedImages = [
-    'assets/individual_signs/Maximum speed limit allowed.png',
-    'assets/individual_signs/No stopping to ensure traffic flow and prevent dri.png',
-    'assets/individual_signs/Overtaking prohibited for the next 2km.png',
-    'assets/individual_signs/No over taking vehicles by goods vehicles for the next 500m.png',
-    'assets/individual_signs/Over taking vehicles is prohibited for the next 500m.png',
-    'assets/individual_signs/Indicates that you must yield to other traffic. Gi.png',
-    'assets/individual_signs/Residential area.png',
-    'assets/individual_signs/Parking only if you pay the parking fee.png',
-    'assets/individual_signs/Parking_30min_Week_09-16_Sat_08-13.png.png',
-    'assets/individual_signs/Parking here is reserved for a vehicle carrying people with disabilities.png',
-  ];
+  print('=== VERIFYING IMAGE PATHS IN K53 QUESTION DATABASE ===\n');
 
-  int missingCount = 0;
-  int foundCount = 0;
+  // Read the k53_question_database.dart file
+  final databaseFile = File('scripts/k53_question_database.dart');
+  if (!databaseFile.existsSync()) {
+    print('❌ k53_question_database.dart not found!');
+    return;
+  }
 
-  print('Checking image files:');
-  print('=' * 50);
+  final content = databaseFile.readAsStringSync();
   
-  for (final imagePath in expectedImages) {
-    final file = File(imagePath);
-    if (file.existsSync()) {
-      print('✓ FOUND: $imagePath');
-      foundCount++;
+  // Extract all image URLs from the database
+  final imageUrlPattern = RegExp(r"'image_url': '([^']+)'");
+  final matches = imageUrlPattern.allMatches(content);
+  
+  final imageUrls = matches.map((match) => match.group(1)!).toList();
+  
+  print('Found ${imageUrls.length} image URLs in question database:\n');
+  
+  int validCount = 0;
+  int invalidCount = 0;
+  
+  for (final imageUrl in imageUrls) {
+    final file = File(imageUrl);
+    final exists = file.existsSync();
+    
+    if (exists) {
+      print('✅ $imageUrl');
+      validCount++;
     } else {
-      print('✗ MISSING: $imagePath');
-      missingCount++;
+      print('❌ $imageUrl (FILE NOT FOUND)');
+      invalidCount++;
     }
   }
-
-  print('\n' + '=' * 50);
-  print('Results:');
-  print('Found: $foundCount images');
-  print('Missing: $missingCount images');
   
-  if (missingCount > 0) {
-    print('\n⚠️  Warning: Some images are missing from the assets directory!');
-    print('Please ensure all referenced images exist in assets/individual_signs/');
+  print('\n=== SUMMARY ===');
+  print('Total image URLs: ${imageUrls.length}');
+  print('Valid paths: $validCount');
+  print('Invalid paths: $invalidCount');
+  
+  if (invalidCount == 0) {
+    print('\n🎉 All image paths are valid!');
   } else {
-    print('\n✅ All image paths are valid!');
+    print('\n⚠️  Some image paths need to be fixed.');
   }
-
-  // Also check the assets directory structure
-  print('\nChecking assets directory structure...');
+  
+  // Also check if all images in subdirectories have corresponding questions
+  print('\n=== CHECKING IMAGE COVERAGE ===');
+  
   final assetsDir = Directory('assets/individual_signs');
-  if (assetsDir.existsSync()) {
-    final files = assetsDir.listSync();
-    final imageFiles = files.where((file) => 
-        file is File && file.path.endsWith('.png')).toList();
+  if (!assetsDir.existsSync()) {
+    print('❌ assets/individual_signs directory not found!');
+    return;
+  }
+  
+  // Get all subdirectories
+  final subdirs = assetsDir.listSync()
+    .where((entity) => entity is Directory)
+    .map((dir) => dir.path)
+    .toList();
+  
+  print('Found ${subdirs.length} subdirectories in assets/individual_signs/');
+  
+  int totalImages = 0;
+  int imagesWithQuestions = 0;
+  
+  for (final subdir in subdirs) {
+    final dirName = subdir.split('/').last;
+    final files = Directory(subdir).listSync()
+      .where((entity) => entity is File)
+      .where((file) => file.path.endsWith('.png') || file.path.endsWith('.jpg'))
+      .where((file) => !file.path.contains('sign_page_')) // Exclude sign_page_ files
+      .toList();
     
-    print('Found ${imageFiles.length} PNG files in assets/individual_signs/');
+    totalImages += files.length;
     
-    // List all files to help identify naming issues
-    if (imageFiles.isNotEmpty) {
-      print('\nAvailable images:');
-      for (final file in imageFiles) {
-        final fileName = path.basename(file.path);
-        print('  - $fileName');
-      }
-    }
-  } else {
-    print('❌ assets/individual_signs/ directory does not exist!');
+    // Check if any of these files have corresponding questions
+    final filesWithQuestions = files.where((file) {
+      final relativePath = file.path.replaceAll('\\', '/');
+      return imageUrls.any((url) => url.contains(relativePath));
+    }).toList();
+    
+    imagesWithQuestions += filesWithQuestions.length;
+    
+    print('$dirName: ${filesWithQuestions.length}/${files.length} images have questions');
+  }
+  
+  print('\n=== COVERAGE SUMMARY ===');
+  print('Total descriptive images: $totalImages');
+  print('Images with questions: $imagesWithQuestions');
+  print('Coverage: ${((imagesWithQuestions / totalImages) * 100).toStringAsFixed(1)}%');
+  
+  if (imagesWithQuestions < totalImages) {
+    print('\n⚠️  Some images are missing questions!');
+    print('Run: dart scripts/generate_image_question_plan.dart');
   }
 }
