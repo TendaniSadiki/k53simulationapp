@@ -56,6 +56,9 @@ class SessionDatabaseService {
         elapsed_ms INTEGER,
         hints_used INTEGER DEFAULT 0,
         answered_at TEXT,
+        points_awarded INTEGER DEFAULT 0,
+        is_point_adjusted INTEGER DEFAULT 0,
+        point_history TEXT,
         PRIMARY KEY (session_id, question_id),
         FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
       )
@@ -145,6 +148,9 @@ class SessionDatabaseService {
     required bool isCorrect,
     required int elapsedMs,
     int hintsUsed = 0,
+    int pointsAwarded = 0,
+    bool isPointAdjusted = false,
+    List<PointAdjustment> pointHistory = const [],
   }) async {
     final db = await database;
     await db.insert(
@@ -157,9 +163,73 @@ class SessionDatabaseService {
         'elapsed_ms': elapsedMs,
         'hints_used': hintsUsed,
         'answered_at': DateTime.now().toIso8601String(),
+        'points_awarded': pointsAwarded,
+        'is_point_adjusted': isPointAdjusted ? 1 : 0,
+        'point_history': json.encode(pointHistory.map((a) => a.toJson()).toList()),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  static Future<void> adjustPoints({
+    required String sessionId,
+    required String questionId,
+    required int pointsChange,
+    required String reason,
+  }) async {
+    final db = await database;
+    
+    // Get current answer
+    final answerMaps = await db.query(
+      'session_answers',
+      where: 'session_id = ? AND question_id = ?',
+      whereArgs: [sessionId, questionId],
+    );
+    
+    if (answerMaps.isEmpty) return;
+    
+    final currentAnswer = answerMaps.first;
+    final currentPoints = currentAnswer['points_awarded'] as int;
+    final currentHistory = currentAnswer['point_history'] != null
+        ? (json.decode(currentAnswer['point_history'] as String) as List<dynamic>)
+            .map((item) => PointAdjustment.fromJson(item as Map<String, dynamic>))
+            .toList()
+        : <PointAdjustment>[];
+    
+    // Calculate new points (minimum 0)
+    final newPoints = (currentPoints + pointsChange).clamp(0, double.infinity).toInt();
+    
+    // Add new adjustment to history
+    final newHistory = [
+      ...currentHistory,
+      PointAdjustment(
+        points: pointsChange,
+        reason: reason,
+        adjustedAt: DateTime.now(),
+      ),
+    ];
+    
+    // Update the answer with new points and history
+    await db.update(
+      'session_answers',
+      {
+        'points_awarded': newPoints,
+        'is_point_adjusted': 1,
+        'point_history': json.encode(newHistory.map((a) => a.toJson()).toList()),
+      },
+      where: 'session_id = ? AND question_id = ?',
+      whereArgs: [sessionId, questionId],
+    );
+  }
+
+  static Future<int> getSessionTotalPoints(String sessionId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT SUM(points_awarded) as total_points FROM session_answers WHERE session_id = ?',
+      [sessionId],
+    );
+    
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   static Future<List<SessionAnswer>> getSessionAnswers(String sessionId) async {
@@ -171,6 +241,13 @@ class SessionDatabaseService {
     );
 
     return answerMaps.map((map) {
+      final pointHistoryJson = map['point_history'] != null
+          ? (json.decode(map['point_history'] as String) as List<dynamic>)
+          : [];
+      final pointHistory = pointHistoryJson.map((item) =>
+        PointAdjustment.fromJson(item as Map<String, dynamic>)
+      ).toList();
+
       return SessionAnswer(
         sessionId: map['session_id'] as String,
         questionId: map['question_id'] as String,
@@ -179,6 +256,9 @@ class SessionDatabaseService {
         elapsedMs: map['elapsed_ms'] as int,
         hintsUsed: map['hints_used'] as int,
         answeredAt: DateTime.parse(map['answered_at'] as String),
+        pointsAwarded: map['points_awarded'] as int? ?? 0,
+        isPointAdjusted: (map['is_point_adjusted'] as int?) == 1,
+        pointHistory: pointHistory,
       );
     }).toList();
   }

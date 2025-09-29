@@ -1,7 +1,9 @@
 import '../models/achievement.dart';
+import '../models/session.dart';
 import './database_service.dart';
 import './supabase_service.dart';
 import './offline_database_service.dart';
+import './point_adjustment_service.dart';
 
 class GamificationService {
   static final GamificationService _instance = GamificationService._internal();
@@ -59,6 +61,75 @@ class GamificationService {
       }
     } catch (e) {
       print('Error tracking progress: $e');
+    }
+  }
+
+  // Track individual question answer with point adjustment
+  Future<void> trackQuestionAnswer({
+    required String sessionId,
+    required String questionId,
+    required int chosenIndex,
+    required bool isCorrect,
+    required int elapsedMs,
+    int hintsUsed = 0,
+  }) async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) return;
+
+    try {
+      // Use PointAdjustmentService to record answer with point tracking
+      await PointAdjustmentService().recordQuestionAnswer(
+        sessionId: sessionId,
+        questionId: questionId,
+        chosenIndex: chosenIndex,
+        isCorrect: isCorrect,
+        elapsedMs: elapsedMs,
+        hintsUsed: hintsUsed,
+      );
+
+      // Track offline activity for the answer
+      await trackOfflineActivity(
+        activityType: 'question_answer',
+        value: isCorrect ? 1 : 0,
+        metadata: {
+          'session_id': sessionId,
+          'question_id': questionId,
+          'is_correct': isCorrect,
+          'points_awarded': isCorrect ? 1 : 0,
+        },
+      );
+    } catch (e) {
+      print('Error tracking question answer: $e');
+    }
+  }
+
+  // Handle navigation back to previous question (point deduction)
+  Future<void> handleNavigationBack({
+    required String sessionId,
+    required String questionId,
+  }) async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) return;
+
+    try {
+      // Use PointAdjustmentService to handle point deduction
+      await PointAdjustmentService().handleNavigationBack(
+        sessionId: sessionId,
+        questionId: questionId,
+      );
+
+      // Track offline activity for navigation back
+      await trackOfflineActivity(
+        activityType: 'navigation_back',
+        value: -1,
+        metadata: {
+          'session_id': sessionId,
+          'question_id': questionId,
+          'reason': 'User navigated back to previous question',
+        },
+      );
+    } catch (e) {
+      print('Error handling navigation back: $e');
     }
   }
 
@@ -152,7 +223,7 @@ class GamificationService {
     }
   }
 
-  // Track daily login streak
+  // Track daily login streak and award points
   Future<void> trackDailyLogin() async {
     final userId = SupabaseService.currentUserId;
     if (userId == null) return;
@@ -161,22 +232,39 @@ class GamificationService {
       final lastLogin = await DatabaseService.getLastLogin(userId);
       final now = DateTime.now();
       
-      if (lastLogin == null || 
+      if (lastLogin == null ||
           now.difference(lastLogin).inHours >= 20) { // Allow 4-hour grace period
         // Reset or increment streak
         final currentStreak = await DatabaseService.getLoginStreak(userId);
-        final newStreak = (lastLogin != null && 
-                          now.difference(lastLogin).inHours <= 28) 
-            ? currentStreak + 1 
+        final newStreak = (lastLogin != null &&
+                          now.difference(lastLogin).inHours <= 28)
+            ? currentStreak + 1
             : 1;
         
         await DatabaseService.updateLoginStreak(userId, newStreak);
+        
+        // Award 1 point for daily login
+        await trackProgress(
+          type: AchievementType.streak,
+          value: 1, // Award 1 point for daily login
+          userId: userId,
+        );
         
         // Track streak achievements
         await trackProgress(
           type: AchievementType.streak,
           value: newStreak,
           userId: userId,
+        );
+        
+        // Track offline activity for daily login points
+        await trackOfflineActivity(
+          activityType: 'daily_login',
+          value: 1,
+          metadata: {
+            'streak': newStreak,
+            'login_date': now.toIso8601String(),
+          },
         );
       }
     } catch (e) {
@@ -249,6 +337,48 @@ class GamificationService {
         print('Error getting offline stats: $offlineError');
       }
       return {'points': 0, 'level': 1, 'unlocked_achievements': 0};
+    }
+  
+    // Get session point summary
+    Future<Map<String, dynamic>> getSessionPointSummary(String sessionId) async {
+      try {
+        return await PointAdjustmentService().getSessionPointSummary(sessionId);
+      } catch (e) {
+        print('Error getting session point summary: $e');
+        return {
+          'totalPoints': 0,
+          'totalQuestions': 0,
+          'questionsWithPoints': 0,
+          'adjustedQuestions': 0,
+          'answers': [],
+        };
+      }
+    }
+  
+    // Get total points for a session
+    Future<int> getSessionTotalPoints(String sessionId) async {
+      try {
+        return await PointAdjustmentService().getSessionTotalPoints(sessionId);
+      } catch (e) {
+        print('Error getting session total points: $e');
+        return 0;
+      }
+    }
+  
+    // Get point history for a specific question
+    Future<List<PointAdjustment>> getQuestionPointHistory({
+      required String sessionId,
+      required String questionId,
+    }) async {
+      try {
+        return await PointAdjustmentService().getQuestionPointHistory(
+          sessionId: sessionId,
+          questionId: questionId,
+        );
+      } catch (e) {
+        print('Error getting question point history: $e');
+        return [];
+      }
     }
   }
 

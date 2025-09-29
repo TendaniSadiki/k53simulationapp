@@ -121,6 +121,12 @@ class Session {
   bool get canRecover => !isCompleted && !isExpired;
   double get progress => totalQuestions > 0 ? currentQuestionIndex / totalQuestions : 0;
   double get accuracy => totalAnswered > 0 ? correctAnswers / totalAnswered : 0;
+  
+  // Calculate total points for this session
+  int get totalPoints {
+    // This will be calculated from session answers when implemented
+    return 0;
+  }
 
   @override
   String toString() {
@@ -172,6 +178,9 @@ class SessionAnswer {
   final int elapsedMs;
   final int hintsUsed;
   final DateTime answeredAt;
+  final int pointsAwarded;
+  final bool isPointAdjusted;
+  final List<PointAdjustment> pointHistory;
 
   SessionAnswer({
     required this.sessionId,
@@ -181,9 +190,17 @@ class SessionAnswer {
     required this.elapsedMs,
     this.hintsUsed = 0,
     required this.answeredAt,
+    this.pointsAwarded = 0,
+    this.isPointAdjusted = false,
+    this.pointHistory = const [],
   });
 
   factory SessionAnswer.fromJson(Map<String, dynamic> json) {
+    final pointHistoryJson = json['pointHistory'] as List<dynamic>? ?? [];
+    final pointHistory = pointHistoryJson.map((item) =>
+      PointAdjustment.fromJson(item as Map<String, dynamic>)
+    ).toList();
+
     return SessionAnswer(
       sessionId: json['sessionId'] as String,
       questionId: json['questionId'] as String,
@@ -192,6 +209,9 @@ class SessionAnswer {
       elapsedMs: json['elapsedMs'] as int,
       hintsUsed: json['hintsUsed'] as int,
       answeredAt: DateTime.parse(json['answeredAt'] as String),
+      pointsAwarded: json['pointsAwarded'] as int? ?? 0,
+      isPointAdjusted: json['isPointAdjusted'] as bool? ?? false,
+      pointHistory: pointHistory,
     );
   }
 
@@ -204,6 +224,63 @@ class SessionAnswer {
       'elapsedMs': elapsedMs,
       'hintsUsed': hintsUsed,
       'answeredAt': answeredAt.toIso8601String(),
+      'pointsAwarded': pointsAwarded,
+      'isPointAdjusted': isPointAdjusted,
+      'pointHistory': pointHistory.map((adjustment) => adjustment.toJson()).toList(),
+    };
+  }
+
+  SessionAnswer copyWith({
+    String? sessionId,
+    String? questionId,
+    int? chosenIndex,
+    bool? isCorrect,
+    int? elapsedMs,
+    int? hintsUsed,
+    DateTime? answeredAt,
+    int? pointsAwarded,
+    bool? isPointAdjusted,
+    List<PointAdjustment>? pointHistory,
+  }) {
+    return SessionAnswer(
+      sessionId: sessionId ?? this.sessionId,
+      questionId: questionId ?? this.questionId,
+      chosenIndex: chosenIndex ?? this.chosenIndex,
+      isCorrect: isCorrect ?? this.isCorrect,
+      elapsedMs: elapsedMs ?? this.elapsedMs,
+      hintsUsed: hintsUsed ?? this.hintsUsed,
+      answeredAt: answeredAt ?? this.answeredAt,
+      pointsAwarded: pointsAwarded ?? this.pointsAwarded,
+      isPointAdjusted: isPointAdjusted ?? this.isPointAdjusted,
+      pointHistory: pointHistory ?? this.pointHistory,
+    );
+  }
+}
+
+class PointAdjustment {
+  final int points;
+  final String reason;
+  final DateTime adjustedAt;
+
+  PointAdjustment({
+    required this.points,
+    required this.reason,
+    required this.adjustedAt,
+  });
+
+  factory PointAdjustment.fromJson(Map<String, dynamic> json) {
+    return PointAdjustment(
+      points: json['points'] as int,
+      reason: json['reason'] as String,
+      adjustedAt: DateTime.parse(json['adjustedAt'] as String),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'points': points,
+      'reason': reason,
+      'adjustedAt': adjustedAt.toIso8601String(),
     };
   }
 }
