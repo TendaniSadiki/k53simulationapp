@@ -1,5 +1,6 @@
 import '../models/achievement.dart';
 import '../models/session.dart';
+import '../models/user_profile.dart';
 import './database_service.dart';
 import './supabase_service.dart';
 import './offline_database_service.dart';
@@ -87,6 +88,19 @@ class GamificationService {
         hintsUsed: hintsUsed,
       );
 
+      // Award gaming points for correct answers
+      if (isCorrect) {
+        await awardGamingPoints(
+          points: 1,
+          reason: 'Correct answer',
+          metadata: {
+            'session_id': sessionId,
+            'question_id': questionId,
+            'elapsed_ms': elapsedMs,
+          },
+        );
+      }
+
       // Track offline activity for the answer
       await trackOfflineActivity(
         activityType: 'question_answer',
@@ -100,6 +114,47 @@ class GamificationService {
       );
     } catch (e) {
       print('Error tracking question answer: $e');
+    }
+  }
+
+  // Award gaming points for in-game accomplishments
+  Future<void> awardGamingPoints({
+    required int points,
+    required String reason,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) return;
+
+    try {
+      final userProfile = await DatabaseService.getUserProfile(userId);
+      final now = DateTime.now();
+      
+      final updatedProfile = userProfile?.addGamingPoints(points) ?? UserProfile(
+        id: userId,
+        handle: userProfile?.handle,
+        learnerCode: userProfile?.learnerCode ?? 0,
+        locale: userProfile?.locale ?? 'en',
+        studyGoalDate: userProfile?.studyGoalDate,
+        createdAt: userProfile?.createdAt ?? now,
+        updatedAt: now,
+        gamingPoints: points,
+        totalPoints: points,
+      );
+      
+      await DatabaseService.updateUserProfile(updatedProfile);
+      
+      // Track offline activity for gaming points
+      await trackOfflineActivity(
+        activityType: 'gaming_points',
+        value: points,
+        metadata: {
+          'reason': reason,
+          ...?metadata,
+        },
+      );
+    } catch (e) {
+      print('Error awarding gaming points: $e');
     }
   }
 
@@ -229,47 +284,74 @@ class GamificationService {
     if (userId == null) return;
 
     try {
-      final lastLogin = await DatabaseService.getLastLogin(userId);
+      final userProfile = await DatabaseService.getUserProfile(userId);
       final now = DateTime.now();
       
-      if (lastLogin == null ||
-          now.difference(lastLogin).inHours >= 20) { // Allow 4-hour grace period
-        // Reset or increment streak
-        final currentStreak = await DatabaseService.getLoginStreak(userId);
-        final newStreak = (lastLogin != null &&
-                          now.difference(lastLogin).inHours <= 28)
+      // Check if user can claim daily points today
+      final canClaimDailyPoints = userProfile?.canClaimDailyPoints() ?? true;
+      final hasLoggedInToday = userProfile?.hasLoggedInToday() ?? false;
+      
+      if (!hasLoggedInToday) {
+        // Calculate new streak
+        final currentStreak = userProfile?.loginStreak ?? 0;
+        final newStreak = (userProfile?.lastLoginDate != null &&
+                          now.difference(userProfile!.lastLoginDate!).inHours <= 28)
             ? currentStreak + 1
             : 1;
         
-        await DatabaseService.updateLoginStreak(userId, newStreak);
-        
-        // Award 1 point for daily login
-        await trackProgress(
-          type: AchievementType.streak,
-          value: 1, // Award 1 point for daily login
-          userId: userId,
+        // Update user profile with new streak and login date
+        final updatedProfile = userProfile?.updateLoginStreak(newStreak) ?? UserProfile(
+          id: userId,
+          handle: userProfile?.handle,
+          learnerCode: userProfile?.learnerCode ?? 0,
+          locale: userProfile?.locale ?? 'en',
+          studyGoalDate: userProfile?.studyGoalDate,
+          createdAt: userProfile?.createdAt ?? now,
+          updatedAt: now,
+          loginStreak: newStreak,
+          lastLoginDate: now,
         );
+        await DatabaseService.updateUserProfile(updatedProfile);
         
-        // Track streak achievements
-        await trackProgress(
-          type: AchievementType.streak,
-          value: newStreak,
-          userId: userId,
-        );
-        
-        // Track offline activity for daily login points
-        await trackOfflineActivity(
-          activityType: 'daily_login',
-          value: 1,
-          metadata: {
-            'streak': newStreak,
-            'login_date': now.toIso8601String(),
-          },
-        );
+        // Award daily points if eligible
+        if (canClaimDailyPoints) {
+          final dailyPoints = _calculateDailyPoints(newStreak);
+          
+          // Update user profile with daily points
+          final pointsProfile = updatedProfile.addDailyPoints(dailyPoints);
+          await DatabaseService.updateUserProfile(pointsProfile);
+          
+          // Track streak achievements
+          await trackProgress(
+            type: AchievementType.streak,
+            value: newStreak,
+            userId: userId,
+          );
+          
+          // Track offline activity for daily login points
+          await trackOfflineActivity(
+            activityType: 'daily_login',
+            value: dailyPoints,
+            metadata: {
+              'streak': newStreak,
+              'daily_points': dailyPoints,
+              'login_date': now.toIso8601String(),
+            },
+          );
+        }
       }
     } catch (e) {
       print('Error tracking daily login: $e');
     }
+  }
+
+  // Calculate daily points based on streak
+  int _calculateDailyPoints(int streak) {
+    if (streak >= 30) return 5; // 30+ days streak
+    if (streak >= 14) return 4; // 14-29 days streak
+    if (streak >= 7) return 3;  // 7-13 days streak
+    if (streak >= 3) return 2;  // 3-6 days streak
+    return 1;                   // 1-2 days streak
   }
 
   // Get user achievements

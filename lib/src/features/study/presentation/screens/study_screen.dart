@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/models/question.dart';
 import '../../../../core/services/qa_service.dart';
+import '../../../../core/services/gamification_service.dart';
 import '../providers/study_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../../shared/widgets/connectivity_indicator.dart';
+import '../../../../shared/widgets/flashcard_widget.dart';
 
 class StudyScreen extends ConsumerStatefulWidget {
   const StudyScreen({super.key});
@@ -18,12 +20,14 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   final PageController _pageController = PageController();
   String? _selectedCategory;
   int? _selectedLearnerCode;
+  bool _showSelectionScreen = true;
+  int _currentSessionPoints = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadQuestions();
+      // Don't load questions immediately - wait for user selection
     });
   }
 
@@ -34,6 +38,11 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   }
 
   Future<void> _loadQuestions() async {
+    setState(() {
+      _showSelectionScreen = false;
+      _currentSessionPoints = 0; // Reset points for new session
+    });
+    
     final notifier = ref.read(studyProvider.notifier);
     await notifier.loadQuestions(
       category: _selectedCategory,
@@ -42,9 +51,23 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     );
   }
 
+  void _startSelection() {
+    setState(() {
+      _showSelectionScreen = true;
+    });
+  }
+
   Future<void> _selectAnswer(int index) async {
     final notifier = ref.read(studyProvider.notifier);
     await notifier.selectAnswer(index);
+    
+    // Update points display if answer was correct
+    final state = ref.read(studyProvider);
+    if (state.currentQuestion?.isAnswerCorrect(index) == true) {
+      setState(() {
+        _currentSessionPoints += 1;
+      });
+    }
   }
 
   void _nextQuestion() {
@@ -58,6 +81,26 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
   void _previousQuestion() {
     final notifier = ref.read(studyProvider.notifier);
+    final state = ref.read(studyProvider);
+    
+    // Check if we're going back to a previously answered question
+    if (state.currentQuestionIndex > 0) {
+      final previousQuestion = state.questions[state.currentQuestionIndex - 1];
+      
+      // Handle point adjustment for navigation back
+      if (state.sessionId != null) {
+        GamificationService().handleNavigationBack(
+          sessionId: state.sessionId!,
+          questionId: previousQuestion.id,
+        );
+        
+        // Update points display (deduct 1 point if previously awarded)
+        setState(() {
+          _currentSessionPoints = _currentSessionPoints > 0 ? _currentSessionPoints - 1 : 0;
+        });
+      }
+    }
+    
     notifier.previousQuestion();
     _pageController.previousPage(
       duration: const Duration(milliseconds: 300),
@@ -178,127 +221,194 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
 
   Widget _buildQuestionCard(Question question, StudyState state) {
     return SingleChildScrollView(
-      child: Card(
-        margin: const EdgeInsets.all(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: FlashcardWidget(
+        frontContent: _buildFrontContent(question, state),
+        backContent: _buildBackContent(question, state),
+        enableDoubleTap: true,
+        mode: FlashcardMode.study,
+        startFlipped: state.showExplanation,
+        onFlip: () {
+          // Track flip analytics if needed
+        },
+      ),
+    );
+  }
+
+  Widget _buildFrontContent(Question question, StudyState state) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Progress indicator
+          LinearProgressIndicator(
+            value: state.progress,
+            backgroundColor: Colors.grey[300],
+            color: Colors.blue,
+          ),
+          const SizedBox(height: 16),
+          
+          // Question text
+          Text(
+            question.questionText,
+            style: Theme.of(context).textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          
+          // Options
+          Column(
+            children: question.options.asMap().entries.map((entry) {
+              final index = entry.key;
+              final option = entry.value;
+              
+              Color? buttonColor;
+              if (state.selectedAnswerIndex == index) {
+                buttonColor = question.isAnswerCorrect(index)
+                    ? Colors.green
+                    : Colors.red;
+              } else if (state.showExplanation && question.isAnswerCorrect(index)) {
+                buttonColor = Colors.green;
+              }
+              
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: ElevatedButton(
+                  onPressed: state.showExplanation
+                      ? null
+                      : () async => await _selectAnswer(index),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: buttonColor,
+                    foregroundColor: buttonColor != null ? Colors.white : null,
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: Text(
+                    option.text,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          
+          // Navigation buttons
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Progress indicator
-              LinearProgressIndicator(
-                value: state.progress,
-                backgroundColor: Colors.grey[300],
-                color: Colors.blue,
+              ElevatedButton(
+                onPressed: state.isFirstQuestion ? null : _previousQuestion,
+                child: const Text('Previous'),
               ),
-              const SizedBox(height: 16),
-              
-              // Question text
-              Text(
-                question.questionText,
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              
-              // Options
-              Column(
-                children: question.options.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final option = entry.value;
-                  
-                  Color? buttonColor;
-                  if (state.selectedAnswerIndex == index) {
-                    buttonColor = question.isAnswerCorrect(index)
-                        ? Colors.green
-                        : Colors.red;
-                  } else if (state.showExplanation && question.isAnswerCorrect(index)) {
-                    buttonColor = Colors.green;
-                  }
-                  
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: ElevatedButton(
-                      onPressed: state.showExplanation
-                          ? null
-                          : () async => await _selectAnswer(index),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: buttonColor,
-                        foregroundColor: buttonColor != null ? Colors.white : null,
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: Text(
-                        option.text,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              
-              // Explanation
-              if (state.showExplanation) ...[
-                const SizedBox(height: 20),
-                Card(
-                  color: Colors.blue[50],
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Explanation:',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.blue[800],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          question.explanation,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-              
-              // Report Question Button
-              if (state.showExplanation) ...[
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () => _reportQuestion(question),
-                  icon: const Icon(Icons.flag, size: 16),
-                  label: const Text('Report Question'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.orange,
-                    side: const BorderSide(color: Colors.orange),
-                  ),
-                ),
-              ],
-              
-              // Navigation buttons
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton(
-                    onPressed: state.isFirstQuestion ? null : _previousQuestion,
-                    child: const Text('Previous'),
-                  ),
-                  ElevatedButton(
-                    onPressed: state.showExplanation && !state.isLastQuestion
-                        ? _nextQuestion
-                        : null,
-                    child: const Text('Next'),
-                  ),
-                ],
+              ElevatedButton(
+                onPressed: state.showExplanation && !state.isLastQuestion
+                    ? _nextQuestion
+                    : null,
+                child: const Text('Next'),
               ),
             ],
           ),
-        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackContent(Question question, StudyState state) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Question text (repeated for context)
+          Text(
+            question.questionText,
+            style: Theme.of(context).textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          
+          // Correct answer indicator
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.shade300),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Correct Answer: ${String.fromCharCode(65 + question.correctIndex)}',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Explanation
+          Card(
+            color: Colors.blue[50],
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Explanation:',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.blue[800],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    question.explanation,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Report Question Button
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => _reportQuestion(question),
+            icon: const Icon(Icons.flag, size: 16),
+            label: const Text('Report Question'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.orange,
+              side: const BorderSide(color: Colors.orange),
+            ),
+          ),
+          
+          // Navigation buttons
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ElevatedButton(
+                onPressed: state.isFirstQuestion ? null : _previousQuestion,
+                child: const Text('Previous'),
+              ),
+              ElevatedButton(
+                onPressed: state.showExplanation && !state.isLastQuestion
+                    ? _nextQuestion
+                    : null,
+                child: const Text('Next'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -365,6 +475,46 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(studyProvider);
 
+    // Show selection screen first
+    if (_showSelectionScreen) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Study Mode')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.school, size: 64, color: Colors.blue),
+              const SizedBox(height: 24),
+              const Text(
+                'Start Studying',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Choose your study preferences to begin',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: 200,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => _buildCategorySelector(),
+                    );
+                  },
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('Start Studying'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (state.isLoading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Study Mode')),
@@ -401,12 +551,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
               const Text('No questions available'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => _buildCategorySelector(),
-                  );
-                },
+                onPressed: _startSelection,
                 child: const Text('Select Study Options'),
               ),
             ],
@@ -419,6 +564,29 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       appBar: AppBar(
         title: const Text('Study Mode'),
         actions: [
+          // Points display
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.blue),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.emoji_events, size: 16, color: Colors.blue),
+                const SizedBox(width: 4),
+                Text(
+                  '$_currentSessionPoints pts',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
           const ConnectivityIndicator(),
           const SizedBox(width: 8),
           IconButton(

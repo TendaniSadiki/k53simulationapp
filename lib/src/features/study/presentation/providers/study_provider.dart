@@ -6,6 +6,7 @@ import '../../../../core/services/offline_database_service.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/study_timer_service.dart';
 import '../../../../core/services/session_persistence_service.dart';
+import '../../../../core/services/gamification_service.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 
 class StudyState {
@@ -252,8 +253,20 @@ class StudyNotifier extends StateNotifier<StudyState> {
       totalAnswered: state.totalAnswered + 1,
     );
 
-    // Record the answer with timing
+    // Record the answer with timing and point tracking
     _recordAnswer(answerIndex, isCorrect, elapsedMs);
+    
+    // Track in gamification service for point awarding
+    if (state.sessionId != null && state.currentQuestion != null) {
+      await GamificationService().trackQuestionAnswer(
+        sessionId: state.sessionId!,
+        questionId: state.currentQuestion!.id,
+        chosenIndex: answerIndex,
+        isCorrect: isCorrect,
+        elapsedMs: elapsedMs,
+        hintsUsed: 0,
+      );
+    }
     
     // Track in analytics
     if (state.sessionId != null && state.currentQuestion != null) {

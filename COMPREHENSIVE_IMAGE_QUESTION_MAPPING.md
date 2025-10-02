@@ -3,6 +3,24 @@
 ## Overview
 This document provides a systematic mapping of all 206 road sign images organized into 23 categories to appropriate K53 test questions. The images are located in `assets/individual_signs/` with subfolders for each category.
 
+## 🛠️ Asset Path Correction System
+
+The app now includes an automatic asset path correction system that fixes common path mismatches at runtime:
+
+### How It Works
+- **SafeImageWidget** automatically applies path corrections using `AssetPathSanitizer.correctAssetPath()`
+- **Debug logging** shows when corrections occur: "Asset path corrected: [old] → [new]"
+- **Common fixes**: Prohibition signs placed in SELECTIVE RESTRICTION folder are automatically redirected to PROHIBITION folder
+
+### Known Path Corrections
+- `SELECTIVE RESTRICTION SIGNS/No over taking vehicles by goods vehicles for the next 500m.png` → `PROHIBITION SIGNS/No over taking vehicles by goods vehicles for the next 500m.png`
+- Other prohibition signs with similar mismatches
+
+### Benefits
+- ✅ Eliminates "Asset not found" errors for prohibition signs
+- ✅ Automatic runtime correction without manual intervention
+- ✅ Debug visibility for path correction operations
+
 ## Image Categories and Counts
 
 ### 1. CHANGES IN VEHICLE MOVEMENT AHEAD (14 images)

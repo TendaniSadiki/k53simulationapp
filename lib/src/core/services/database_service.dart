@@ -443,7 +443,7 @@ class DatabaseService {
     }) async {
       try {
         final referralData = {
-          'referrer_id': referrerId,
+          'referrer_user_id': referrerId,
           'referred_email': referredEmail,
           'status': 'pending',
           'created_at': DateTime.now().toIso8601String(),
@@ -485,7 +485,7 @@ class DatabaseService {
           final referralsResponse = await _client
               .from('referrals')
               .select()
-              .eq('referrer_id', userId);
+              .eq('referrer_user_id', userId);
 
           referrals = referralsResponse as List<dynamic>;
         } catch (e) {
@@ -534,7 +534,7 @@ class DatabaseService {
           final response = await _client
               .from('referrals')
               .select()
-              .eq('referrer_id', userId)
+              .eq('referrer_user_id', userId)
               .order('created_at', ascending: false);
 
           data = response as List<dynamic>;
@@ -731,6 +731,72 @@ class DatabaseService {
       print('Tracking progress: $type with value $value');
     } catch (e) {
       print('Error tracking progress: $e');
+    }
+  }
+  // Progress Tracking Operations
+  static Future<void> saveLearningGoal(String userId, Map<String, dynamic> goal) async {
+    try {
+      await _client
+          .from('learning_goals')
+          .upsert({
+            'user_id': userId,
+            'goal_data': goal,
+            'updated_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'user_id,id');
+    } catch (e) {
+      print('Error saving learning goal: $e');
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getUserLearningGoals(String userId) async {
+    try {
+      final response = await _client
+          .from('learning_goals')
+          .select()
+          .eq('user_id', userId)
+          .order('updated_at', ascending: false);
+
+      final List<dynamic> data = response as List<dynamic>;
+      return data
+          .map((item) => (item as Map<String, dynamic>)['goal_data'] as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      print('Error getting user learning goals: $e');
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getUserSessions(String userId) async {
+    try {
+      final response = await _client
+          .from('sessions')
+          .select()
+          .eq('user_id', userId)
+          .order('started_at', ascending: false);
+
+      final List<dynamic> data = response as List<dynamic>;
+      return data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      print('Error getting user sessions: $e');
+      return [];
+    }
+  }
+
+  // Session Analytics Operations
+  static Future<List<Map<String, dynamic>>> getCompletedSessions(String userId) async {
+    try {
+      final response = await _client
+          .from('sessions')
+          .select()
+          .eq('user_id', userId)
+          .eq('is_completed', true)
+          .order('completed_at', ascending: false);
+
+      final List<dynamic> data = response as List<dynamic>;
+      return data.cast<Map<String, dynamic>>();
+    } catch (e) {
+      print('Error getting completed sessions: $e');
+      return [];
     }
   }
 }
