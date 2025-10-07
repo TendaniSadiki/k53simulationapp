@@ -1,4 +1,6 @@
 import './session_database_service.dart';
+import './gamification_service.dart';
+import './supabase_service.dart';
 import '../models/session.dart';
 import '../models/question.dart';
 import '../models/progress_tracking.dart';
@@ -128,9 +130,10 @@ class ProgressTrackingService {
         if (!dailyStats.containsKey(date)) {
           dailyStats[date] = DailyProgress(
             date: date,
+            studyMinutes: 0,
+            practiceMinutes: 0,
             questionsAnswered: 0,
             correctAnswers: 0,
-            pointsEarned: 0,
           );
         }
 
@@ -138,7 +141,6 @@ class ProgressTrackingService {
         dailyStats[date] = stats.copyWith(
           questionsAnswered: stats.questionsAnswered + 1,
           correctAnswers: stats.correctAnswers + (answer.isCorrect ? 1 : 0),
-          pointsEarned: stats.pointsEarned + answer.pointsAwarded,
         );
       }
     }
@@ -263,13 +265,105 @@ class ProgressTrackingService {
 
   Future<ProgressAnalytics?> getProgressAnalytics() async {
     try {
-      // For now, return null - in production, this would calculate analytics
-      // This method should be implemented to calculate actual progress analytics
-      return null;
+      // Get user stats from gamification service
+      final gamificationService = GamificationService();
+      final userStats = await gamificationService.getUserStats();
+      
+      // Get user sessions for calculating analytics
+      final userId = SupabaseService.currentUserId;
+      if (userId == null) return null;
+      
+      final sessions = await SessionDatabaseService.getUserSessions(userId);
+      final completedSessions = sessions.where((s) => s.isCompleted).toList();
+      
+      // Calculate total points from all sessions
+      int totalPoints = 0;
+      int totalQuestionsAnswered = 0;
+      int correctAnswers = 0;
+      int totalStudyMinutes = 0;
+      
+      for (final session in completedSessions) {
+        final sessionPoints = await SessionDatabaseService.getSessionTotalPoints(session.id);
+        final sessionAnswers = await SessionDatabaseService.getSessionAnswers(session.id);
+        
+        totalPoints += sessionPoints;
+        totalQuestionsAnswered += sessionAnswers.length;
+        correctAnswers += sessionAnswers.where((a) => a.isCorrect).length;
+        
+        // Calculate study time from elapsed milliseconds
+        final sessionTime = sessionAnswers.fold<int>(0, (sum, answer) => sum + answer.elapsedMs);
+        totalStudyMinutes += (sessionTime / 60000).round(); // Convert ms to minutes
+      }
+      
+      final accuracy = totalQuestionsAnswered > 0 ? correctAnswers / totalQuestionsAnswered : 0.0;
+      
+      // Calculate daily progress for last 7 days
+      final dailyProgress = await _getLast7DaysProgress(userId);
+      
+      // Calculate category accuracy
+      final categoryAccuracy = await _getCategoryAccuracy(userId);
+      
+      return ProgressAnalytics(
+        periodStart: DateTime.now().subtract(const Duration(days: 30)),
+        periodEnd: DateTime.now(),
+        totalStudySessions: completedSessions.length, // Simplified - all completed sessions count as study
+        totalPracticeSessions: 0, // Simplified - would need session type tracking
+        totalQuestionsAnswered: totalQuestionsAnswered,
+        correctAnswers: correctAnswers,
+        averageAccuracy: accuracy,
+        totalStudyMinutes: totalStudyMinutes,
+        dailyProgress: dailyProgress,
+        categoryAccuracy: categoryAccuracy,
+        commonObstacles: [],
+      );
     } catch (e) {
       // Error getting progress analytics: $e
       return null;
     }
+  }
+
+  Future<List<DailyProgress>> _getLast7DaysProgress(String userId) async {
+    final dailyStats = await _getDailyProgress(userId);
+    final now = DateTime.now();
+    final last7Days = <DailyProgress>[];
+    
+    for (int i = 6; i >= 0; i--) {
+      final date = DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
+      final stats = dailyStats[date];
+      
+      if (stats != null) {
+        last7Days.add(DailyProgress(
+          date: date,
+          studyMinutes: stats.studyMinutes,
+          practiceMinutes: stats.practiceMinutes,
+          questionsAnswered: stats.questionsAnswered,
+          correctAnswers: stats.correctAnswers,
+        ));
+      } else {
+        last7Days.add(DailyProgress(
+          date: date,
+          studyMinutes: 0,
+          practiceMinutes: 0,
+          questionsAnswered: 0,
+          correctAnswers: 0,
+        ));
+      }
+    }
+    
+    return last7Days;
+  }
+
+  Future<Map<String, double>> _getCategoryAccuracy(String userId) async {
+    final categoryStats = await _getCategoryProgress(userId);
+    final categoryAccuracy = <String, double>{};
+    
+    for (final entry in categoryStats.entries) {
+      final category = entry.key;
+      final stats = entry.value;
+      categoryAccuracy[category] = stats.accuracy;
+    }
+    
+    return categoryAccuracy;
   }
 
   Future<LearningGoal> generateK53LearningGoal() async {
@@ -451,36 +545,6 @@ class CategoryProgress {
   }
 }
 
-class DailyProgress {
-  final DateTime date;
-  final int questionsAnswered;
-  final int correctAnswers;
-  final int pointsEarned;
-
-  const DailyProgress({
-    required this.date,
-    required this.questionsAnswered,
-    required this.correctAnswers,
-    required this.pointsEarned,
-  });
-
-  double get accuracy =>
-      questionsAnswered > 0 ? correctAnswers / questionsAnswered : 0;
-
-  DailyProgress copyWith({
-    DateTime? date,
-    int? questionsAnswered,
-    int? correctAnswers,
-    int? pointsEarned,
-  }) {
-    return DailyProgress(
-      date: date ?? this.date,
-      questionsAnswered: questionsAnswered ?? this.questionsAnswered,
-      correctAnswers: correctAnswers ?? this.correctAnswers,
-      pointsEarned: pointsEarned ?? this.pointsEarned,
-    );
-  }
-}
 
 class SessionProgress {
   final Session session;

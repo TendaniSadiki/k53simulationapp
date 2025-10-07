@@ -479,7 +479,7 @@ class DatabaseService {
   
     static Future<Map<String, dynamic>> getReferralStats(String userId) async {
       try {
-        // Get total referrals - handle case where referrer_id column might not exist
+        // Get total referrals - handle case where referrals table might not exist
         List<dynamic> referrals = [];
         try {
           final referralsResponse = await _client
@@ -489,8 +489,9 @@ class DatabaseService {
 
           referrals = referralsResponse as List<dynamic>;
         } catch (e) {
-          // Column might not exist, return empty stats
-          print('Referral column error (referrer_id might not exist): $e');
+          // Table might not exist, return empty stats
+          print('Referrals table might not exist in database: $e');
+          print('To fix this, run the SQL script: scripts/check_and_create_referrals_table.sql');
           return {
             'totalReferrals': 0,
             'completedReferrals': 0,
@@ -539,8 +540,9 @@ class DatabaseService {
 
           data = response as List<dynamic>;
         } catch (e) {
-          // Column might not exist, return empty list
-          print('Referral column error (referrer_id might not exist): $e');
+          // Table might not exist, return empty list
+          print('Referrals table might not exist in database: $e');
+          print('To fix this, run the SQL script: scripts/check_and_create_referrals_table.sql');
           return [];
         }
         

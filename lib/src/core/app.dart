@@ -79,24 +79,32 @@ class _K53AppState extends ConsumerState<K53App> {
       
       // Show recovery dialog for database sessions first
       if (pendingSessions.isNotEmpty) {
+        // Wait for the next frame to ensure MaterialApp is fully built
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            for (final session in pendingSessions) {
-              if (session.canRecover) {
-                _showDatabaseSessionRecoveryDialog(context, session);
-                break; // Only show recovery for first valid session
+          // Add another delay to ensure MaterialLocalizations are available
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              for (final session in pendingSessions) {
+                if (session.canRecover) {
+                  _showDatabaseSessionRecoveryDialog(context, session);
+                  break; // Only show recovery for first valid session
+                }
               }
             }
-          }
+          });
         });
       }
       
       // Fallback to old persistence system
       if (studySession != null && SessionPersistenceService.isSessionValid(studySession)) {
+        // Wait for the next frame to ensure MaterialApp is fully built
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _showSessionRecoveryDialog(context, studySession, SessionType.study);
-          }
+          // Add another delay to ensure MaterialLocalizations are available
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              _showSessionRecoveryDialog(context, studySession, SessionType.study);
+            }
+          });
         });
       } else if (studySession != null) {
         // Clear expired study session
@@ -104,10 +112,14 @@ class _K53AppState extends ConsumerState<K53App> {
       }
       
       if (examSession != null && SessionPersistenceService.isSessionValid(examSession)) {
+        // Wait for the next frame to ensure MaterialApp is fully built
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _showSessionRecoveryDialog(context, examSession, SessionType.exam);
-          }
+          // Add another delay to ensure MaterialLocalizations are available
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              _showSessionRecoveryDialog(context, examSession, SessionType.exam);
+            }
+          });
         });
       } else if (examSession != null) {
         // Clear expired exam session

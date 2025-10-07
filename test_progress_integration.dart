@@ -3,6 +3,7 @@ import 'package:k53app/src/core/services/progress_tracking_service.dart';
 import 'package:k53app/src/core/services/session_database_service.dart';
 import 'package:k53app/src/core/models/session.dart';
 import 'package:k53app/src/core/models/question.dart';
+import 'package:k53app/src/core/models/progress_tracking.dart';
 
 void main() {
   group('Progress Tracking Integration Tests', () {
@@ -83,9 +84,10 @@ void main() {
     test('DailyProgress accuracy calculation', () {
       final daily = DailyProgress(
         date: DateTime.now(),
+        studyMinutes: 30,
+        practiceMinutes: 20,
         questionsAnswered: 20,
         correctAnswers: 15,
-        pointsEarned: 50,
       );
 
       expect(daily.accuracy, 0.75);
