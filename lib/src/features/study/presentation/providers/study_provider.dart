@@ -1,114 +1,102 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import '../../../exam/data/mock_exam_config.dart';
 import '../../../../core/models/question.dart';
-import '../../../../core/services/analytics_service.dart';
+import '../../../../core/models/session.dart';
 import '../../../../core/services/database_service.dart';
-import '../../../../core/services/offline_database_service.dart';
-import '../../../../core/services/supabase_service.dart';
-import '../../../../core/services/study_timer_service.dart';
-import '../../../../core/services/session_persistence_service.dart';
-import '../../../../core/services/gamification_service.dart';
-import '../../../gamification/presentation/providers/gamification_provider.dart';
+import '../../../../core/services/analytics_service.dart';
+
+final studyProvider = StateNotifierProvider<StudyProvider, StudyState>((ref) {
+  return StudyProvider();
+});
 
 class StudyState {
+  final Session? currentSession;
   final List<Question> questions;
   final int currentQuestionIndex;
   final bool isLoading;
   final String? error;
-  final int? selectedAnswerIndex;
   final bool showExplanation;
-  final String? sessionId;
+  final int? selectedAnswerIndex;
+  final Map<String, int> userAnswers;
   final int correctAnswers;
   final int totalAnswered;
-  final Map<String, int> questionStartTimes; // Track when each question was shown
-  final int elapsedSeconds; // Track time spent in study session
 
   StudyState({
-    required this.questions,
-    required this.currentQuestionIndex,
-    required this.isLoading,
+    this.currentSession,
+    this.questions = const [],
+    this.currentQuestionIndex = 0,
+    this.isLoading = false,
     this.error,
+    this.showExplanation = false,
     this.selectedAnswerIndex,
-    required this.showExplanation,
-    this.sessionId,
-    required this.correctAnswers,
-    required this.totalAnswered,
-    required this.questionStartTimes,
-    this.elapsedSeconds = 0,
+    this.userAnswers = const {},
+    this.correctAnswers = 0,
+    this.totalAnswered = 0,
   });
 
   StudyState copyWith({
+    Session? currentSession,
     List<Question>? questions,
     int? currentQuestionIndex,
     bool? isLoading,
     String? error,
-    int? selectedAnswerIndex,
     bool? showExplanation,
-    String? sessionId,
+    int? selectedAnswerIndex,
+    Map<String, int>? userAnswers,
     int? correctAnswers,
     int? totalAnswered,
-    Map<String, int>? questionStartTimes,
-    int? elapsedSeconds,
   }) {
     return StudyState(
+      currentSession: currentSession ?? this.currentSession,
       questions: questions ?? this.questions,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       isLoading: isLoading ?? this.isLoading,
-      error: error,
-      selectedAnswerIndex: selectedAnswerIndex,
+      error: error ?? this.error,
       showExplanation: showExplanation ?? this.showExplanation,
-      sessionId: sessionId ?? this.sessionId,
+      selectedAnswerIndex: selectedAnswerIndex ?? this.selectedAnswerIndex,
+      userAnswers: userAnswers ?? this.userAnswers,
       correctAnswers: correctAnswers ?? this.correctAnswers,
       totalAnswered: totalAnswered ?? this.totalAnswered,
-      questionStartTimes: questionStartTimes ?? this.questionStartTimes,
-      elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
     );
   }
 
   Question? get currentQuestion {
-    if (currentQuestionIndex >= 0 && currentQuestionIndex < questions.length) {
-      return questions[currentQuestionIndex];
+    if (questions.isEmpty || currentQuestionIndex >= questions.length) {
+      return null;
     }
-    return null;
+    return questions[currentQuestionIndex];
+  }
+
+  double get progress {
+    if (questions.isEmpty) return 0.0;
+    return (currentQuestionIndex + 1) / questions.length;
+  }
+
+  double get accuracy {
+    if (totalAnswered == 0) return 0.0;
+    return correctAnswers / totalAnswered;
   }
 
   bool get isLastQuestion => currentQuestionIndex == questions.length - 1;
   bool get isFirstQuestion => currentQuestionIndex == 0;
-  double get progress => questions.isEmpty ? 0 : (currentQuestionIndex + 1) / questions.length;
-  double get accuracy => totalAnswered == 0 ? 0 : correctAnswers / totalAnswered;
 }
 
-class StudyNotifier extends StateNotifier<StudyState> {
-  final StudyTimerService _timerService = StudyTimerService();
-  
-  StudyNotifier() : super(StudyState(
-    questions: [],
-    currentQuestionIndex: 0,
-    isLoading: false,
-    showExplanation: false,
-    correctAnswers: 0,
-    totalAnswered: 0,
-    questionStartTimes: {},
-    elapsedSeconds: 0,
-  )) {
-    _setupTimerListener();
-  }
+class StudyProvider extends StateNotifier<StudyState> {
+  StudyProvider() : super(StudyState());
 
-  void _setupTimerListener() {
-    _timerService.timerStream.listen((elapsedSeconds) {
-      state = state.copyWith(elapsedSeconds: elapsedSeconds);
-    });
-  }
-
-  Future<void> loadQuestions({
+  // Start a new study session
+  Future<void> startStudySession({
     String? category,
     int? learnerCode,
-    int limit = 10,
+    int questionCount = 10,
   }) async {
-    state = state.copyWith(isLoading: true, error: null);
-
     try {
-      final questions = await OfflineDatabaseService.getRandomQuestions(
-        count: limit,
+      state = state.copyWith(isLoading: true, error: null);
+
+      // Get questions for the study session
+      final questions = await DatabaseService().getRandomQuestions(
+        count: questionCount,
         category: category,
         learnerCode: learnerCode,
       );
@@ -121,256 +109,197 @@ class StudyNotifier extends StateNotifier<StudyState> {
         return;
       }
 
-      // Create a new study session
-      final userId = SupabaseService.currentUserId;
-      if (userId != null) {
-        final session = await DatabaseService.createSession(
-          userId: userId,
-          mode: 'study',
-          category: category,
-          totalQuestions: questions.length,
-        );
+      // Create a new session
+      final sessionId = const Uuid().v4();
+      final session = Session(
+        id: sessionId,
+        type: SessionType.study,
+        category: category,
+        totalQuestions: questions.length,
+        currentQuestionIndex: 0,
+        correctAnswers: 0,
+        totalAnswered: 0,
+        timeRemainingSeconds: 0,
+        isPaused: false,
+        isCompleted: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        expiresAt: DateTime.now().add(const Duration(hours: 24)),
+      );
 
-        if (session != null) {
-          // Track session start in analytics
-          await AnalyticsService.trackStudySessionStart(
-            sessionId: session['id'],
-            category: category ?? 'all',
-            questionCount: questions.length,
-          );
-        }
+      // Track analytics
+      await AnalyticsService.trackStudySessionStart(
+        sessionId: sessionId,
+        category: category,
+        learnerCode: learnerCode,
+      );
 
-        state = state.copyWith(
-          questions: questions,
-          isLoading: false,
-          sessionId: session?['id'],
-          questionStartTimes: {questions[0].id: DateTime.now().millisecondsSinceEpoch},
-        );
+      state = state.copyWith(
+        currentSession: session,
+        questions: questions,
+        currentQuestionIndex: 0,
+        isLoading: false,
+        userAnswers: {},
+        correctAnswers: 0,
+        totalAnswered: 0,
+        showExplanation: false,
+        selectedAnswerIndex: null,
+      );
 
-        // Start timer and save initial session state
-        _timerService.start();
-        await saveSessionState();
-      } else {
-        state = state.copyWith(
-          questions: questions,
-          isLoading: false,
-          questionStartTimes: {questions[0].id: DateTime.now().millisecondsSinceEpoch},
-        );
-      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to load questions: $e',
+        error: 'Failed to start study session: $e',
       );
     }
   }
 
-  @override
-  void dispose() {
-    _timerService.dispose();
-    super.dispose();
-  }
+  // Answer the current question
+  Future<void> answerQuestion(int answerIndex) async {
+    final currentQuestion = state.currentQuestion;
+    final session = state.currentSession;
+    if (currentQuestion == null || session == null) return;
 
-  Future<void> completeSession() async {
-    if (state.sessionId == null || state.questions.isEmpty) return;
+    final isCorrect = currentQuestion.isAnswerCorrect(answerIndex);
+    final questionId = currentQuestion.id;
 
-    try {
-      // Update session completion in database
-      await DatabaseService.updateSession(
-        sessionId: state.sessionId!,
-        score: state.correctAnswers,
-        timeSpentSeconds: state.elapsedSeconds,
-        isCompleted: true,
-      );
+    // Update session statistics
+    final newCorrectAnswers = isCorrect 
+      ? state.correctAnswers + 1 
+      : state.correctAnswers;
+    final newTotalAnswered = state.totalAnswered + 1;
 
-      // Clear timer and session state
-      await _timerService.clearSession();
-      await SessionPersistenceService.clearStudySession();
+    // Update user answers
+    final newUserAnswers = Map<String, int>.from(state.userAnswers);
+    newUserAnswers[questionId] = answerIndex;
 
-      // Track gamification progress - this will be handled by the study screen
-      // since we don't have access to the ref here
-    } catch (e) {
-      print('Error completing session: $e');
-    }
-  }
-
-  // Save current session state for persistence
-  Future<void> saveSessionState() async {
-    if (state.sessionId == null || state.questions.isEmpty) return;
-
-    final sessionState = SessionState(
-      type: SessionType.study,
-      questions: state.questions,
-      currentQuestionIndex: state.currentQuestionIndex,
-      selectedAnswerIndex: state.selectedAnswerIndex,
-      showExplanation: state.showExplanation,
-      sessionId: state.sessionId,
-      correctAnswers: state.correctAnswers,
-      totalAnswered: state.totalAnswered,
-      userAnswers: {}, // Study mode doesn't track user answers for review
-      additionalData: {
-        'elapsedSeconds': state.elapsedSeconds,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
+    // Track analytics
+    await AnalyticsService.trackQuestionAnswered(
+      sessionId: session.id,
+      questionId: questionId,
+      isCorrect: isCorrect,
+      elapsedMs: 0, // TODO: Implement timing
+      hintsUsed: 0, // TODO: Implement hints
     );
-
-    await SessionPersistenceService.saveStudySession(sessionState);
-  }
-
-  // Load session state from persistence
-  Future<void> loadSessionState(SessionState sessionState) async {
-    state = StudyState(
-      questions: sessionState.questions,
-      currentQuestionIndex: sessionState.currentQuestionIndex,
-      isLoading: false,
-      selectedAnswerIndex: sessionState.selectedAnswerIndex,
-      showExplanation: sessionState.showExplanation,
-      sessionId: sessionState.sessionId,
-      correctAnswers: sessionState.correctAnswers,
-      totalAnswered: sessionState.totalAnswered,
-      questionStartTimes: {sessionState.questions[sessionState.currentQuestionIndex].id: DateTime.now().millisecondsSinceEpoch},
-      elapsedSeconds: sessionState.additionalData['elapsedSeconds'] ?? 0,
-    );
-
-    // Restore timer state
-    if (sessionState.additionalData['elapsedSeconds'] != null) {
-      _timerService.start();
-    }
-  }
-
-  Future<void> selectAnswer(int answerIndex) async {
-    if (state.showExplanation || state.currentQuestion == null) return;
-
-    final startTime = state.questionStartTimes[state.currentQuestion!.id] ?? DateTime.now().millisecondsSinceEpoch;
-    final elapsedMs = DateTime.now().millisecondsSinceEpoch - startTime;
-    final isCorrect = state.currentQuestion!.isAnswerCorrect(answerIndex);
-    final newCorrectAnswers = isCorrect ? state.correctAnswers + 1 : state.correctAnswers;
 
     state = state.copyWith(
       selectedAnswerIndex: answerIndex,
       showExplanation: true,
+      userAnswers: newUserAnswers,
       correctAnswers: newCorrectAnswers,
-      totalAnswered: state.totalAnswered + 1,
+      totalAnswered: newTotalAnswered,
     );
 
-    // Record the answer with timing and point tracking
-    _recordAnswer(answerIndex, isCorrect, elapsedMs);
-    
-    // Track in gamification service for point awarding
-    if (state.sessionId != null && state.currentQuestion != null) {
-      await GamificationService().trackQuestionAnswer(
-        sessionId: state.sessionId!,
-        questionId: state.currentQuestion!.id,
-        chosenIndex: answerIndex,
-        isCorrect: isCorrect,
-        elapsedMs: elapsedMs,
-        hintsUsed: 0,
-      );
-    }
-    
-    // Track in analytics
-    if (state.sessionId != null && state.currentQuestion != null) {
-      await AnalyticsService.trackQuestionAnswered(
-        sessionId: state.sessionId!,
-        questionId: state.currentQuestion!.id,
-        isCorrect: isCorrect,
-        elapsedMs: elapsedMs,
-        hintsUsed: 0,
-      );
-    }
+    // Update question statistics in database
+    await DatabaseService().updateQuestionStats(
+      questionId: questionId,
+      isCorrect: isCorrect,
+    );
   }
 
-  Future<void> _recordAnswer(int answerIndex, bool isCorrect, int elapsedMs) async {
-    if (state.sessionId == null || state.currentQuestion == null) return;
-
-    try {
-      // Use offline database service which handles both online and offline scenarios
-      await OfflineDatabaseService.recordAnswer(
-        sessionId: state.sessionId!,
-        questionId: state.currentQuestion!.id,
-        chosenIndex: answerIndex,
-        isCorrect: isCorrect,
-        elapsedMs: elapsedMs,
-        hintsUsed: 0,
-      );
-    } catch (e) {
-      // Silently fail - we don't want to disrupt the user experience
-      print('Failed to record answer: $e');
-    }
-  }
-
+  // Move to next question
   void nextQuestion() {
     if (state.isLastQuestion) return;
 
-    final newIndex = state.currentQuestionIndex + 1;
-    final newQuestion = state.questions[newIndex];
-    
     state = state.copyWith(
-      currentQuestionIndex: newIndex,
-      selectedAnswerIndex: null,
+      currentQuestionIndex: state.currentQuestionIndex + 1,
       showExplanation: false,
-      questionStartTimes: {
-        ...state.questionStartTimes,
-        newQuestion.id: DateTime.now().millisecondsSinceEpoch,
-      },
+      selectedAnswerIndex: null,
     );
   }
 
+  // Move to previous question
   void previousQuestion() {
     if (state.isFirstQuestion) return;
 
-    final newIndex = state.currentQuestionIndex - 1;
-    final newQuestion = state.questions[newIndex];
-    
     state = state.copyWith(
-      currentQuestionIndex: newIndex,
-      selectedAnswerIndex: null,
+      currentQuestionIndex: state.currentQuestionIndex - 1,
       showExplanation: false,
-      questionStartTimes: {
-        ...state.questionStartTimes,
-        newQuestion.id: DateTime.now().millisecondsSinceEpoch,
-      },
+      selectedAnswerIndex: null,
     );
   }
 
+  // Complete the study session
+  Future<void> completeSession() async {
+    final session = state.currentSession;
+    if (session == null) return;
+
+    final completedSession = session.copyWith(
+      isCompleted: true,
+      updatedAt: DateTime.now(),
+    );
+
+    // Track analytics
+    await AnalyticsService.trackStudySessionComplete(
+      sessionId: session.id,
+      correctAnswers: state.correctAnswers,
+      totalAnswered: state.totalAnswered,
+      category: session.category,
+    );
+
+    state = state.copyWith(
+      currentSession: completedSession,
+    );
+  }
+
+  // Reset the study session
+  void resetSession() {
+    state = StudyState();
+  }
+
+  // Toggle explanation visibility
   void toggleExplanation() {
     state = state.copyWith(
       showExplanation: !state.showExplanation,
     );
   }
 
-  Future<void> retrySession() async {
-    // Reset timer
-    _timerService.reset();
-    
-    state = StudyState(
-      questions: state.questions,
-      currentQuestionIndex: 0,
-      isLoading: false,
+  // Jump to a specific question
+  void jumpToQuestion(int index) {
+    if (index < 0 || index >= state.questions.length) return;
+
+    state = state.copyWith(
+      currentQuestionIndex: index,
       showExplanation: false,
-      sessionId: state.sessionId,
-      correctAnswers: 0,
-      totalAnswered: 0,
-      questionStartTimes: {state.questions[0].id: DateTime.now().millisecondsSinceEpoch},
-      elapsedSeconds: 0,
-    );
-    
-    // Start timer and save session state
-    _timerService.start();
-    await saveSessionState();
-    
-    // Track session retry
-    await AnalyticsService.trackUserEngagement(
-      eventName: 'study_session_retry',
-      properties: {'question_count': state.questions.length},
+      selectedAnswerIndex: null,
     );
   }
 
-  void clearError() {
-    state = state.copyWith(error: null);
+  // Get question by ID
+  Question? getQuestionById(String questionId) {
+    return state.questions.firstWhere(
+      (q) => q.id == questionId,
+      orElse: () => throw StateError('Question not found'),
+    );
+  }
+
+  // Check if a question has been answered
+  bool isQuestionAnswered(String questionId) {
+    return state.userAnswers.containsKey(questionId);
+  }
+
+  // Get user's answer for a question
+  int? getUserAnswer(String questionId) {
+    return state.userAnswers[questionId];
+  }
+
+  // Check if user's answer is correct
+  bool isUserAnswerCorrect(String questionId) {
+    final userAnswer = getUserAnswer(questionId);
+    if (userAnswer == null) return false;
+
+    final question = getQuestionById(questionId);
+    return question?.isAnswerCorrect(userAnswer) ?? false;
+  }
+
+  // Get session statistics
+  Map<String, dynamic> getSessionStats() {
+    return {
+      'totalQuestions': state.questions.length,
+      'answeredQuestions': state.totalAnswered,
+      'correctAnswers': state.correctAnswers,
+      'accuracy': state.accuracy,
+      'progress': state.progress,
+    };
   }
 }
-
-final studyProvider = StateNotifierProvider<StudyNotifier, StudyState>((ref) {
-  return StudyNotifier();
-});

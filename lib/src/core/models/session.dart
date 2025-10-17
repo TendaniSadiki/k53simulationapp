@@ -1,9 +1,12 @@
-import 'dart:convert';
+import 'package:equatable/equatable.dart';
 import 'question.dart';
 
-enum SessionType { study, exam }
+enum SessionType {
+  study,
+  exam,
+}
 
-class Session {
+class Session extends Equatable {
   final String id;
   final SessionType type;
   final String? userId;
@@ -20,7 +23,7 @@ class Session {
   final DateTime expiresAt;
   final Map<String, dynamic> metadata;
 
-  Session({
+  const Session({
     required this.id,
     required this.type,
     this.userId,
@@ -37,49 +40,6 @@ class Session {
     required this.expiresAt,
     this.metadata = const {},
   });
-
-  factory Session.fromJson(Map<String, dynamic> json) {
-    return Session(
-      id: json['id'] as String,
-      type: SessionType.values.firstWhere(
-        (e) => e.toString() == json['type'],
-        orElse: () => SessionType.study,
-      ),
-      userId: json['userId'],
-      category: json['category'],
-      totalQuestions: json['totalQuestions'] as int,
-      currentQuestionIndex: json['currentQuestionIndex'] as int,
-      correctAnswers: json['correctAnswers'] as int,
-      totalAnswered: json['totalAnswered'] as int,
-      timeRemainingSeconds: json['timeRemainingSeconds'] as int,
-      isPaused: json['isPaused'] as bool,
-      isCompleted: json['isCompleted'] as bool,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      expiresAt: DateTime.parse(json['expiresAt'] as String),
-      metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'type': type.toString(),
-      'userId': userId,
-      'category': category,
-      'totalQuestions': totalQuestions,
-      'currentQuestionIndex': currentQuestionIndex,
-      'correctAnswers': correctAnswers,
-      'totalAnswered': totalAnswered,
-      'timeRemainingSeconds': timeRemainingSeconds,
-      'isPaused': isPaused,
-      'isCompleted': isCompleted,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'expiresAt': expiresAt.toIso8601String(),
-      'metadata': metadata,
-    };
-  }
 
   Session copyWith({
     String? id,
@@ -117,57 +77,44 @@ class Session {
     );
   }
 
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
-  bool get canRecover => !isCompleted && !isExpired;
-  double get progress => totalQuestions > 0 ? currentQuestionIndex / totalQuestions : 0;
-  double get accuracy => totalAnswered > 0 ? correctAnswers / totalAnswered : 0;
-  
-  // Calculate total points for this session
-  int get totalPoints {
-    // This will be calculated from session answers when implemented
-    return 0;
+  bool get canRecover {
+    return !isCompleted &&
+           DateTime.now().isBefore(expiresAt) &&
+           currentQuestionIndex < totalQuestions;
+  }
+
+  bool get isExpired {
+    return DateTime.now().isAfter(expiresAt);
+  }
+
+  double get progress {
+    if (totalQuestions == 0) return 0.0;
+    return currentQuestionIndex / totalQuestions;
+  }
+
+  double get accuracy {
+    if (totalAnswered == 0) return 0.0;
+    return correctAnswers / totalAnswered;
   }
 
   @override
-  String toString() {
-    return 'Session(id: $id, type: $type, progress: $progress, completed: $isCompleted)';
-  }
-}
-
-class SessionQuestion {
-  final String sessionId;
-  final String questionId;
-  final int questionIndex;
-  final Map<String, dynamic> questionData;
-
-  SessionQuestion({
-    required this.sessionId,
-    required this.questionId,
-    required this.questionIndex,
-    required this.questionData,
-  });
-
-  factory SessionQuestion.fromJson(Map<String, dynamic> json) {
-    return SessionQuestion(
-      sessionId: json['sessionId'] as String,
-      questionId: json['questionId'] as String,
-      questionIndex: json['questionIndex'] as int,
-      questionData: Map<String, dynamic>.from(json['questionData']),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'sessionId': sessionId,
-      'questionId': questionId,
-      'questionIndex': questionIndex,
-      'questionData': questionData,
-    };
-  }
-
-  Question toQuestion() {
-    return Question.fromSupabase(questionData);
-  }
+  List<Object?> get props => [
+        id,
+        type,
+        userId,
+        category,
+        totalQuestions,
+        currentQuestionIndex,
+        correctAnswers,
+        totalAnswered,
+        timeRemainingSeconds,
+        isPaused,
+        isCompleted,
+        createdAt,
+        updatedAt,
+        expiresAt,
+        metadata,
+      ];
 }
 
 class SessionAnswer {
@@ -176,11 +123,8 @@ class SessionAnswer {
   final int chosenIndex;
   final bool isCorrect;
   final int elapsedMs;
-  final int hintsUsed;
   final DateTime answeredAt;
   final int pointsAwarded;
-  final bool isPointAdjusted;
-  final List<PointAdjustment> pointHistory;
 
   SessionAnswer({
     required this.sessionId,
@@ -188,99 +132,71 @@ class SessionAnswer {
     required this.chosenIndex,
     required this.isCorrect,
     required this.elapsedMs,
-    this.hintsUsed = 0,
     required this.answeredAt,
     this.pointsAwarded = 0,
-    this.isPointAdjusted = false,
-    this.pointHistory = const [],
   });
-
-  factory SessionAnswer.fromJson(Map<String, dynamic> json) {
-    final pointHistoryJson = json['pointHistory'] as List<dynamic>? ?? [];
-    final pointHistory = pointHistoryJson.map((item) =>
-      PointAdjustment.fromJson(item as Map<String, dynamic>)
-    ).toList();
-
-    return SessionAnswer(
-      sessionId: json['sessionId'] as String,
-      questionId: json['questionId'] as String,
-      chosenIndex: json['chosenIndex'] as int,
-      isCorrect: json['isCorrect'] as bool,
-      elapsedMs: json['elapsedMs'] as int,
-      hintsUsed: json['hintsUsed'] as int,
-      answeredAt: DateTime.parse(json['answeredAt'] as String),
-      pointsAwarded: json['pointsAwarded'] as int? ?? 0,
-      isPointAdjusted: json['isPointAdjusted'] as bool? ?? false,
-      pointHistory: pointHistory,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {
-      'sessionId': sessionId,
-      'questionId': questionId,
-      'chosenIndex': chosenIndex,
-      'isCorrect': isCorrect,
-      'elapsedMs': elapsedMs,
-      'hintsUsed': hintsUsed,
-      'answeredAt': answeredAt.toIso8601String(),
-      'pointsAwarded': pointsAwarded,
-      'isPointAdjusted': isPointAdjusted,
-      'pointHistory': pointHistory.map((adjustment) => adjustment.toJson()).toList(),
+      'session_id': sessionId,
+      'question_id': questionId,
+      'chosen_index': chosenIndex,
+      'is_correct': isCorrect,
+      'elapsed_ms': elapsedMs,
+      'answered_at': answeredAt.toIso8601String(),
+      'points_awarded': pointsAwarded,
     };
   }
 
-  SessionAnswer copyWith({
-    String? sessionId,
-    String? questionId,
-    int? chosenIndex,
-    bool? isCorrect,
-    int? elapsedMs,
-    int? hintsUsed,
-    DateTime? answeredAt,
-    int? pointsAwarded,
-    bool? isPointAdjusted,
-    List<PointAdjustment>? pointHistory,
-  }) {
+  factory SessionAnswer.fromJson(Map<String, dynamic> json) {
     return SessionAnswer(
-      sessionId: sessionId ?? this.sessionId,
-      questionId: questionId ?? this.questionId,
-      chosenIndex: chosenIndex ?? this.chosenIndex,
-      isCorrect: isCorrect ?? this.isCorrect,
-      elapsedMs: elapsedMs ?? this.elapsedMs,
-      hintsUsed: hintsUsed ?? this.hintsUsed,
-      answeredAt: answeredAt ?? this.answeredAt,
-      pointsAwarded: pointsAwarded ?? this.pointsAwarded,
-      isPointAdjusted: isPointAdjusted ?? this.isPointAdjusted,
-      pointHistory: pointHistory ?? this.pointHistory,
+      sessionId: json['session_id'] ?? '',
+      questionId: json['question_id'] ?? '',
+      chosenIndex: json['chosen_index'] ?? -1,
+      isCorrect: json['is_correct'] ?? false,
+      elapsedMs: json['elapsed_ms'] ?? 0,
+      answeredAt: DateTime.parse(json['answered_at'] ?? DateTime.now().toIso8601String()),
+      pointsAwarded: json['points_awarded'] ?? 0,
     );
   }
 }
 
-class PointAdjustment {
-  final int points;
-  final String reason;
-  final DateTime adjustedAt;
+// Legacy session state for backward compatibility
+class SessionState {
+  final SessionType type;
+  final List<Question> questions;
+  final int currentQuestionIndex;
+  final int? selectedAnswerIndex;
+  final bool showExplanation;
+  final String? sessionId;
+  final int correctAnswers;
+  final int totalAnswered;
+  final Map<String, int> userAnswers;
+  final Map<String, dynamic> additionalData;
 
-  PointAdjustment({
-    required this.points,
-    required this.reason,
-    required this.adjustedAt,
+  SessionState({
+    required this.type,
+    required this.questions,
+    required this.currentQuestionIndex,
+    this.selectedAnswerIndex,
+    required this.showExplanation,
+    this.sessionId,
+    required this.correctAnswers,
+    required this.totalAnswered,
+    this.userAnswers = const {},
+    this.additionalData = const {},
   });
 
-  factory PointAdjustment.fromJson(Map<String, dynamic> json) {
-    return PointAdjustment(
-      points: json['points'] as int,
-      reason: json['reason'] as String,
-      adjustedAt: DateTime.parse(json['adjustedAt'] as String),
-    );
+  double get progress {
+    if (questions.isEmpty) return 0.0;
+    return (currentQuestionIndex + 1) / questions.length;
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'points': points,
-      'reason': reason,
-      'adjustedAt': adjustedAt.toIso8601String(),
-    };
+  double get accuracy {
+    if (totalAnswered == 0) return 0.0;
+    return correctAnswers / totalAnswered;
   }
+
+  bool get isLastQuestion => currentQuestionIndex == questions.length - 1;
+  bool get isFirstQuestion => currentQuestionIndex == 0;
 }

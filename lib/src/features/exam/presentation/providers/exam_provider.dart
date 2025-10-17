@@ -13,6 +13,7 @@ import '../../../../core/services/session_database_service.dart';
 import '../../../../core/services/session_migration_service.dart';
 import '../../../../core/services/session_recovery_service.dart';
 import '../../../../core/services/gamification_service.dart';
+import '../../../../core/services/gamification_integration_service.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../data/mock_exam_config.dart';
 
@@ -451,16 +452,16 @@ class ExamNotifier extends StateNotifier<ExamState> {
       if (state.questions.isNotEmpty) {
         final category = state.questions.first.category;
         
-        // Use the gamification provider to track exam completion
-        if (_ref != null) {
-          final gamificationNotifier = _ref!.read(gamificationProvider.notifier);
-          await gamificationNotifier.trackExamSessionComplete(
-            correctAnswers: state.correctAnswers,
-            totalQuestions: state.questions.length,
-            category: category,
-            passed: state.hasPassed,
-          );
-        }
+        // Use the gamification integration service to track exam completion
+        await GamificationIntegrationService().trackExamSession(
+          sessionId: state.sessionId!,
+          correctAnswers: state.correctAnswers,
+          totalQuestions: state.questions.length,
+          category: category,
+          passed: state.hasPassed,
+          timeSpentSeconds: timeSpentSeconds,
+          answers: _getSessionAnswers(),
+        );
       }
     } catch (e) {
       print('Error completing exam: $e');
@@ -759,7 +760,31 @@ class ExamNotifier extends StateNotifier<ExamState> {
       print('Error awarding points: $e');
     }
   }
+
+  // Helper method to get session answers for gamification tracking
+  List<session_models.SessionAnswer> _getSessionAnswers() {
+    final answers = <session_models.SessionAnswer>[];
+    
+    for (final question in state.questions) {
+      final startTime = state.questionStartTimes[question.id] ?? DateTime.now().millisecondsSinceEpoch;
+      final elapsedMs = (DateTime.now().millisecondsSinceEpoch - startTime).toInt();
+      final userAnswerIndex = state.userAnswers[question.id] ?? -1;
+      final isCorrect = userAnswerIndex != -1 ? question.isAnswerCorrect(userAnswerIndex) : false;
+      
+      answers.add(session_models.SessionAnswer(
+        sessionId: state.sessionId ?? '',
+        questionId: question.id,
+        chosenIndex: userAnswerIndex,
+        isCorrect: isCorrect,
+        elapsedMs: elapsedMs,
+        answeredAt: DateTime.now(),
+        pointsAwarded: isCorrect ? 10 : 0, // 10 points for correct answers in exams
+      ));
+    }
+    return answers;
+  }
 }
+
 
 
 final examProvider = StateNotifierProvider<ExamNotifier, ExamState>((ref) {

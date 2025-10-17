@@ -1,281 +1,440 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
 import '../../../../core/services/asset_management_service.dart';
+import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/database_service.dart';
 import '../../../../core/models/asset_bucket.dart';
 import '../../../../core/models/road_sign_asset.dart';
 
-// Provider for the asset management service
-final assetManagementServiceProvider = Provider<AssetManagementService>((ref) {
-  final service = AssetManagementService();
-  service.initialize();
-  return service;
+final assetManagementProvider = StateNotifierProvider<AssetManagementProvider, AssetManagementState>((ref) {
+  return AssetManagementProvider();
 });
 
-// State for asset management
 class AssetManagementState {
-  final List<AssetBucket> buckets;
   final List<RoadSignAsset> assets;
-  final String? selectedBucketId;
-  final String searchQuery;
+  final List<AssetBucket> buckets;
   final bool isLoading;
   final String? error;
+  final String? selectedBucket;
+  final Map<String, int> assetCounts;
+  final Map<String, int> storageUsage;
 
-  const AssetManagementState({
-    this.buckets = const [],
+  AssetManagementState({
     this.assets = const [],
-    this.selectedBucketId,
-    this.searchQuery = '',
+    this.buckets = const [],
     this.isLoading = false,
     this.error,
+    this.selectedBucket,
+    this.assetCounts = const {},
+    this.storageUsage = const {},
   });
 
   AssetManagementState copyWith({
-    List<AssetBucket>? buckets,
     List<RoadSignAsset>? assets,
-    String? selectedBucketId,
-    String? searchQuery,
+    List<AssetBucket>? buckets,
     bool? isLoading,
     String? error,
+    String? selectedBucket,
+    Map<String, int>? assetCounts,
+    Map<String, int>? storageUsage,
   }) {
     return AssetManagementState(
-      buckets: buckets ?? this.buckets,
       assets: assets ?? this.assets,
-      selectedBucketId: selectedBucketId ?? this.selectedBucketId,
-      searchQuery: searchQuery ?? this.searchQuery,
+      buckets: buckets ?? this.buckets,
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: error ?? this.error,
+      selectedBucket: selectedBucket ?? this.selectedBucket,
+      assetCounts: assetCounts ?? this.assetCounts,
+      storageUsage: storageUsage ?? this.storageUsage,
     );
   }
 
-  // Get current bucket
-  AssetBucket? get selectedBucket {
-    if (selectedBucketId == null) return null;
-    return buckets.firstWhere(
-      (bucket) => bucket.id == selectedBucketId,
-      orElse: () => buckets.firstWhere((bucket) => bucket.name == 'road_signs'),
-    );
-  }
-
-  // Get filtered assets based on current state
-  List<RoadSignAsset> get filteredAssets {
-    List<RoadSignAsset> filtered = assets;
-
-    // Filter by selected bucket
-    if (selectedBucketId != null) {
-      filtered = filtered.where((asset) => asset.bucketId == selectedBucketId).toList();
-    }
-
-    // Filter by search query
-    if (searchQuery.isNotEmpty) {
-      filtered = filtered.where((asset) => asset.matchesSearch(searchQuery)).toList();
-    }
-
-    return filtered;
-  }
-
-  // Get assets for global search (across all buckets)
-  List<RoadSignAsset> get globallySearchedAssets {
-    if (searchQuery.isEmpty) return [];
-    return assets.where((asset) => asset.matchesSearch(searchQuery)).toList();
-  }
-
-  // Statistics
-  Map<String, dynamic> get statistics {
-    final totalAssets = assets.length;
-    final totalBuckets = buckets.length;
-    final totalFileSize = assets.fold<int>(0, (sum, asset) => sum + asset.fileSize);
-
-    return {
-      'total_assets': totalAssets,
-      'total_buckets': totalBuckets,
-      'total_file_size': totalFileSize,
-      'formatted_total_size': _formatFileSize(totalFileSize),
-    };
-  }
-
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
+  int get totalAssets => assets.length;
+  int get totalBuckets => buckets.length;
+  int get totalStorageUsage => storageUsage.values.fold(0, (sum, value) => sum + value);
 }
 
-// Notifier for asset management
-class AssetManagementNotifier extends StateNotifier<AssetManagementState> {
-  final AssetManagementService _service;
+class AssetManagementProvider extends StateNotifier<AssetManagementState> {
+  AssetManagementProvider() : super(AssetManagementState());
 
-  AssetManagementNotifier(this._service) : super(const AssetManagementState()) {
-    _loadInitialData();
-  }
-
-  Future<void> _loadInitialData() async {
-    state = state.copyWith(isLoading: true);
+  // Load all assets and buckets
+  Future<void> loadAssets() async {
     try {
-      final buckets = _service.getAllBuckets();
-      final assets = _service.getAllAssets();
-      
+      state = state.copyWith(isLoading: true, error: null);
+
+      final assetService = AssetManagementService();
+      final assets = assetService.getAllAssets();
+      final buckets = assetService.getAllBuckets();
+      final assetCounts = _calculateAssetCounts();
+      final storageUsage = _calculateStorageUsage();
+
       state = state.copyWith(
-        buckets: buckets,
         assets: assets,
+        buckets: buckets,
+        assetCounts: assetCounts,
+        storageUsage: storageUsage,
         isLoading: false,
+      );
+
+      // Track analytics
+      await AnalyticsService.trackEvent(
+        eventType: 'assets_loaded',
+        metadata: {
+          'total_assets': assets.length,
+          'total_buckets': buckets.length,
+          'total_storage_usage': storageUsage.values.fold(0, (sum, value) => sum + value),
+        },
       );
     } catch (e) {
       state = state.copyWith(
+        isLoading: false,
         error: 'Failed to load assets: $e',
-        isLoading: false,
       );
     }
   }
 
-  // Bucket management
-  Future<void> createBucket({
-    required String name,
-    required String description,
-    required String category,
-  }) async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final bucket = _service.createBucket(
-        name: name,
-        description: description,
-        category: category,
-      );
-      
-      final updatedBuckets = _service.getAllBuckets();
-      state = state.copyWith(
-        buckets: updatedBuckets,
-        isLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        error: 'Failed to create bucket: $e',
-        isLoading: false,
-      );
-    }
-  }
-
-  Future<void> deleteBucket(String bucketId) async {
-    state = state.copyWith(isLoading: true);
-    try {
-      _service.deleteBucket(bucketId);
-      
-      final updatedBuckets = _service.getAllBuckets();
-      final updatedAssets = _service.getAllAssets();
-      
-      state = state.copyWith(
-        buckets: updatedBuckets,
-        assets: updatedAssets,
-        isLoading: false,
-        selectedBucketId: state.selectedBucketId == bucketId ? null : state.selectedBucketId,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        error: 'Failed to delete bucket: $e',
-        isLoading: false,
-      );
-    }
-  }
-
-  // Asset management
+  // Upload asset
   Future<void> uploadAsset({
-    required String bucketId,
     required String filePath,
-    String? location,
-    String? signType,
-    String? condition,
-    List<String> tags = const [],
+    required String bucketName,
+    String? assetName,
+    Map<String, dynamic>? metadata,
   }) async {
-    state = state.copyWith(isLoading: true);
     try {
-      final file = File(filePath);
-      await _service.uploadAsset(
-        bucketId: bucketId,
-        imageFile: file,
-        location: location,
-        signType: signType,
-        condition: condition,
-        tags: tags,
+      state = state.copyWith(isLoading: true, error: null);
+
+      final assetService = AssetManagementService();
+      final asset = await assetService.uploadAsset(
+        bucketId: bucketName,
+        imageFile: File(filePath),
+        metadata: metadata ?? {},
       );
-      
-      final updatedAssets = _service.getAllAssets();
-      final updatedBuckets = _service.getAllBuckets();
-      
+
+      // Add to local state
+      final newAssets = List<RoadSignAsset>.from(state.assets);
+      newAssets.add(asset);
+
+      // Update asset counts and storage usage
+      final newAssetCounts = Map<String, int>.from(state.assetCounts);
+      newAssetCounts[bucketName] = (newAssetCounts[bucketName] ?? 0) + 1;
+
+      final newStorageUsage = Map<String, int>.from(state.storageUsage);
+      final fileSize = asset.fileSize;
+      newStorageUsage[bucketName] = (newStorageUsage[bucketName] ?? 0) + fileSize;
+
       state = state.copyWith(
-        assets: updatedAssets,
-        buckets: updatedBuckets,
+        assets: newAssets,
+        assetCounts: newAssetCounts,
+        storageUsage: newStorageUsage,
         isLoading: false,
+      );
+
+      // Track analytics
+      await AnalyticsService.trackEvent(
+        eventType: 'asset_uploaded',
+        metadata: {
+          'bucket_name': bucketName,
+          'asset_name': asset.fileName,
+          'file_size': fileSize,
+        },
       );
     } catch (e) {
       state = state.copyWith(
+        isLoading: false,
         error: 'Failed to upload asset: $e',
-        isLoading: false,
       );
     }
   }
 
+  // Delete asset
   Future<void> deleteAsset(String assetId) async {
-    state = state.copyWith(isLoading: true);
     try {
-      _service.deleteAsset(assetId);
-      
-      final updatedAssets = _service.getAllAssets();
-      final updatedBuckets = _service.getAllBuckets();
-      
+      state = state.copyWith(isLoading: true, error: null);
+
+      final asset = state.assets.firstWhere((a) => a.id == assetId);
+      final bucketName = asset.bucketId;
+      final fileSize = asset.fileSize;
+
+      final assetService = AssetManagementService();
+      assetService.deleteAsset(assetId);
+
+      // Remove from local state
+      final newAssets = state.assets.where((a) => a.id != assetId).toList();
+
+      // Update asset counts and storage usage
+      final newAssetCounts = Map<String, int>.from(state.assetCounts);
+      if (bucketName != null) {
+        newAssetCounts[bucketName] = (newAssetCounts[bucketName] ?? 1) - 1;
+        if (newAssetCounts[bucketName]! <= 0) {
+          newAssetCounts.remove(bucketName);
+        }
+      }
+
+      final newStorageUsage = Map<String, int>.from(state.storageUsage);
+      if (bucketName != null) {
+        newStorageUsage[bucketName] = (newStorageUsage[bucketName] ?? fileSize) - fileSize;
+        if (newStorageUsage[bucketName]! <= 0) {
+          newStorageUsage.remove(bucketName);
+        }
+      }
+
       state = state.copyWith(
-        assets: updatedAssets,
-        buckets: updatedBuckets,
+        assets: newAssets,
+        assetCounts: newAssetCounts,
+        storageUsage: newStorageUsage,
         isLoading: false,
+      );
+
+      // Track analytics
+      await AnalyticsService.trackEvent(
+        eventType: 'asset_deleted',
+        metadata: {
+          'asset_id': assetId,
+          'bucket_name': bucketName,
+          'file_size': fileSize,
+        },
       );
     } catch (e) {
       state = state.copyWith(
-        error: 'Failed to delete asset: $e',
         isLoading: false,
+        error: 'Failed to delete asset: $e',
       );
     }
   }
 
-  // Search and filtering
-  void setSearchQuery(String query) {
-    state = state.copyWith(searchQuery: query);
+  // Create bucket
+  Future<void> createBucket({
+    required String bucketName,
+    String? description,
+    Map<String, dynamic>? settings,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+
+      final assetService = AssetManagementService();
+      final bucket = assetService.createBucket(
+        name: bucketName,
+        description: description ?? '',
+        category: 'general',
+        metadata: settings ?? {},
+      );
+
+      // Add to local state
+      final newBuckets = List<AssetBucket>.from(state.buckets);
+      newBuckets.add(bucket);
+
+      state = state.copyWith(
+        buckets: newBuckets,
+        isLoading: false,
+      );
+
+      // Track analytics
+      await AnalyticsService.trackEvent(
+        eventType: 'bucket_created',
+        metadata: {
+          'bucket_name': bucketName,
+          'description': description,
+        },
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to create bucket: $e',
+      );
+    }
   }
 
-  void selectBucket(String? bucketId) {
-    state = state.copyWith(selectedBucketId: bucketId);
+  // Delete bucket
+  Future<void> deleteBucket(String bucketName) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+
+      final assetService = AssetManagementService();
+      assetService.deleteBucket(bucketName);
+
+      // Remove from local state
+      final newBuckets = state.buckets.where((b) => b.name != bucketName).toList();
+
+      // Remove assets from this bucket
+      final newAssets = state.assets.where((a) => a.bucketId != bucketName).toList();
+
+      // Update asset counts and storage usage
+      final newAssetCounts = Map<String, int>.from(state.assetCounts);
+      newAssetCounts.remove(bucketName);
+
+      final newStorageUsage = Map<String, int>.from(state.storageUsage);
+      newStorageUsage.remove(bucketName);
+
+      state = state.copyWith(
+        buckets: newBuckets,
+        assets: newAssets,
+        assetCounts: newAssetCounts,
+        storageUsage: newStorageUsage,
+        isLoading: false,
+      );
+
+      // Track analytics
+      await AnalyticsService.trackEvent(
+        eventType: 'bucket_deleted',
+        metadata: {
+          'bucket_name': bucketName,
+        },
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to delete bucket: $e',
+      );
+    }
   }
 
-  void clearSearch() {
-    state = state.copyWith(searchQuery: '');
+  // Select bucket
+  void selectBucket(String? bucketName) {
+    state = state.copyWith(selectedBucket: bucketName);
   }
 
+  // Get assets by bucket
+  List<RoadSignAsset> getAssetsByBucket(String bucketName) {
+    return state.assets.where((asset) => asset.bucketId == bucketName).toList();
+  }
+
+  // Search assets
+  List<RoadSignAsset> searchAssets(String query) {
+    if (query.isEmpty) return state.assets;
+
+    final assetService = AssetManagementService();
+    return assetService.searchAssets(query);
+  }
+
+  // Get asset by ID
+  RoadSignAsset? getAssetById(String assetId) {
+    try {
+      return state.assets.firstWhere((asset) => asset.id == assetId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get bucket by name
+  AssetBucket? getBucketByName(String bucketName) {
+    try {
+      return state.buckets.firstWhere((bucket) => bucket.name == bucketName);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Clear error
   void clearError() {
     state = state.copyWith(error: null);
   }
 
-  // Import existing assets
-  Future<void> importExistingAssets() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      await _service.importExistingAssets();
-      
-      final updatedAssets = _service.getAllAssets();
-      final updatedBuckets = _service.getAllBuckets();
-      
-      state = state.copyWith(
-        assets: updatedAssets,
-        buckets: updatedBuckets,
-        isLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        error: 'Failed to import existing assets: $e',
-        isLoading: false,
-      );
+  // Helper methods
+  Map<String, int> _calculateAssetCounts() {
+    final counts = <String, int>{};
+    
+    for (final asset in state.assets) {
+      final bucketName = asset.bucketId;
+      counts[bucketName] = (counts[bucketName] ?? 0) + 1;
     }
+    
+    return counts;
+  }
+
+  Map<String, int> _calculateStorageUsage() {
+    final usage = <String, int>{};
+    
+    for (final asset in state.assets) {
+      final bucketName = asset.bucketId;
+      final fileSize = asset.fileSize;
+      
+      usage[bucketName] = (usage[bucketName] ?? 0) + fileSize;
+    }
+    
+    return usage;
+  }
+
+  // Get storage statistics
+  Map<String, dynamic> getStorageStats() {
+    final totalUsage = state.storageUsage.values.fold(0, (sum, value) => sum + value);
+    final totalAssets = state.assets.length;
+    final totalBuckets = state.buckets.length;
+
+    return {
+      'total_usage_bytes': totalUsage,
+      'total_usage_mb': (totalUsage / (1024 * 1024)).toStringAsFixed(2),
+      'total_assets': totalAssets,
+      'total_buckets': totalBuckets,
+      'average_asset_size': totalAssets > 0 ? totalUsage / totalAssets : 0,
+    };
+  }
+
+  // Get bucket statistics
+  Map<String, dynamic> getBucketStats(String bucketName) {
+    final bucketAssets = getAssetsByBucket(bucketName);
+    final assetCount = bucketAssets.length;
+    final totalSize = bucketAssets.fold(0, (sum, asset) => sum + asset.fileSize);
+
+    return {
+      'asset_count': assetCount,
+      'total_size_bytes': totalSize,
+      'total_size_mb': (totalSize / (1024 * 1024)).toStringAsFixed(2),
+      'average_asset_size': assetCount > 0 ? totalSize / assetCount : 0,
+    };
+  }
+
+  // Validate asset name
+  bool isValidAssetName(String name) {
+    if (name.isEmpty) return false;
+    if (name.length > 255) return false;
+    
+    // Check for invalid characters
+    final invalidChars = RegExp(r'[<>:"/\\|?*]');
+    return !invalidChars.hasMatch(name);
+  }
+
+  // Validate bucket name
+  bool isValidBucketName(String name) {
+    if (name.isEmpty) return false;
+    if (name.length > 63) return false;
+    
+    // Check for invalid characters and patterns
+    final invalidChars = RegExp(r'[^a-z0-9\-]');
+    return !invalidChars.hasMatch(name.toLowerCase()) &&
+           !name.startsWith('-') &&
+           !name.endsWith('-') &&
+           !name.contains('--');
+  }
+
+  // Get asset file extension
+  String getAssetFileExtension(String assetName) {
+    final parts = assetName.split('.');
+    return parts.length > 1 ? parts.last.toLowerCase() : '';
+  }
+
+  // Check if asset is an image
+  bool isImageAsset(String assetName) {
+    final extension = getAssetFileExtension(assetName);
+    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(extension);
+  }
+
+  // Check if asset is a video
+  bool isVideoAsset(String assetName) {
+    final extension = getAssetFileExtension(assetName);
+    return ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'].contains(extension);
+  }
+
+  // Check if asset is a document
+  bool isDocumentAsset(String assetName) {
+    final extension = getAssetFileExtension(assetName);
+    return ['pdf', 'doc', 'docx', 'txt', 'rtf'].contains(extension);
+  }
+
+  // Get asset type category
+  String getAssetTypeCategory(String assetName) {
+    if (isImageAsset(assetName)) return 'image';
+    if (isVideoAsset(assetName)) return 'video';
+    if (isDocumentAsset(assetName)) return 'document';
+    return 'other';
   }
 }
-
-// Provider for the asset management state
-final assetManagementProvider = StateNotifierProvider<AssetManagementNotifier, AssetManagementState>((ref) {
-  final service = ref.watch(assetManagementServiceProvider);
-  return AssetManagementNotifier(service);
-});
