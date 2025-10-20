@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import '../models/session.dart';
 import '../models/question.dart';
+import '../models/point_adjustment.dart';
 import './offline_database_service.dart';
 
 class SessionDatabaseService {
@@ -203,9 +204,14 @@ class SessionDatabaseService {
     final newHistory = [
       ...currentHistory,
       PointAdjustment(
-        points: pointsChange,
+        id: '${sessionId}_${questionId}_${DateTime.now().millisecondsSinceEpoch}',
+        sessionId: sessionId,
+        questionId: questionId,
+        originalPoints: currentPoints,
+        adjustedPoints: newPoints,
         reason: reason,
         adjustedAt: DateTime.now(),
+        adjustedBy: 'system',
       ),
     ];
     
@@ -241,24 +247,14 @@ class SessionDatabaseService {
     );
 
     return answerMaps.map((map) {
-      final pointHistoryJson = map['point_history'] != null
-          ? (json.decode(map['point_history'] as String) as List<dynamic>)
-          : [];
-      final pointHistory = pointHistoryJson.map((item) =>
-        PointAdjustment.fromJson(item as Map<String, dynamic>)
-      ).toList();
-
       return SessionAnswer(
         sessionId: map['session_id'] as String,
         questionId: map['question_id'] as String,
         chosenIndex: map['chosen_index'] as int,
         isCorrect: (map['is_correct'] as int) == 1,
         elapsedMs: map['elapsed_ms'] as int,
-        hintsUsed: map['hints_used'] as int,
         answeredAt: DateTime.parse(map['answered_at'] as String),
         pointsAwarded: map['points_awarded'] as int? ?? 0,
-        isPointAdjusted: (map['is_point_adjusted'] as int?) == 1,
-        pointHistory: pointHistory,
       );
     }).toList();
   }

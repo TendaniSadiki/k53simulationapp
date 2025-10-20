@@ -2,16 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../exam/data/mock_exam_config.dart';
 import '../../../../core/models/question.dart';
-import '../../../../core/models/session.dart';
+import '../../../../core/models/session.dart' as session_models;
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/session_persistence_service.dart';
 
 final studyProvider = StateNotifierProvider<StudyProvider, StudyState>((ref) {
   return StudyProvider();
 });
 
 class StudyState {
-  final Session? currentSession;
+  final session_models.Session? currentSession;
   final List<Question> questions;
   final int currentQuestionIndex;
   final bool isLoading;
@@ -36,7 +37,7 @@ class StudyState {
   });
 
   StudyState copyWith({
-    Session? currentSession,
+    session_models.Session? currentSession,
     List<Question>? questions,
     int? currentQuestionIndex,
     bool? isLoading,
@@ -111,9 +112,9 @@ class StudyProvider extends StateNotifier<StudyState> {
 
       // Create a new session
       final sessionId = const Uuid().v4();
-      final session = Session(
+      final session = session_models.Session(
         id: sessionId,
-        type: SessionType.study,
+        type: session_models.SessionType.study,
         category: category,
         totalQuestions: questions.length,
         currentQuestionIndex: 0,
@@ -290,6 +291,157 @@ class StudyProvider extends StateNotifier<StudyState> {
 
     final question = getQuestionById(questionId);
     return question?.isAnswerCorrect(userAnswer) ?? false;
+  }
+
+  // Load session state for recovery
+  Future<void> loadSessionState(SessionState session) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+
+      // For recovery, we already have the questions in the session state
+      final questions = session.questions;
+
+      if (questions.isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'No questions found in recovered session',
+        );
+        return;
+      }
+
+      // Create session model from session state
+      final studySession = session_models.Session(
+        id: session.sessionId ?? const Uuid().v4(),
+        type: session_models.SessionType.study,
+        category: null,
+        totalQuestions: questions.length,
+        currentQuestionIndex: session.currentQuestionIndex,
+        correctAnswers: session.correctAnswers,
+        totalAnswered: session.totalAnswered,
+        timeRemainingSeconds: session.additionalData['timeRemainingSeconds'] ?? 0,
+        isPaused: session.additionalData['isPaused'] ?? false,
+        isCompleted: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        expiresAt: DateTime.now().add(const Duration(hours: 24)),
+      );
+
+      state = state.copyWith(
+        currentSession: studySession,
+        questions: questions,
+        currentQuestionIndex: session.currentQuestionIndex,
+        isLoading: false,
+        userAnswers: session.userAnswers,
+        correctAnswers: session.correctAnswers,
+        totalAnswered: session.totalAnswered,
+        showExplanation: session.showExplanation,
+        selectedAnswerIndex: session.selectedAnswerIndex,
+      );
+
+      // Track analytics for session recovery
+      await AnalyticsService.trackEvent(
+        eventName: 'study_session_recovered',
+        properties: {
+          'session_id': studySession.id,
+          'recovered_from_index': session.currentQuestionIndex,
+        },
+      );
+
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load session state: $e',
+      );
+    }
+  }
+
+  // Load questions for study session
+  Future<void> loadQuestions({
+    String? category,
+    int? learnerCode,
+    int questionCount = 10,
+  }) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+
+      final questions = await DatabaseService().getRandomQuestions(
+        count: questionCount,
+        category: category,
+        learnerCode: learnerCode,
+      );
+
+      if (questions.isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'No questions available for the selected criteria',
+        );
+        return;
+      }
+
+      state = state.copyWith(
+        questions: questions,
+        currentQuestionIndex: 0,
+        isLoading: false,
+        userAnswers: {},
+        correctAnswers: 0,
+        totalAnswered: 0,
+        showExplanation: false,
+        selectedAnswerIndex: null,
+      );
+
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load questions: $e',
+      );
+    }
+  }
+
+  // Select answer for current question
+  Future<void> selectAnswer(int answerIndex) async {
+    final currentQuestion = state.currentQuestion;
+    if (currentQuestion == null) return;
+
+    final isCorrect = currentQuestion.isAnswerCorrect(answerIndex);
+    final questionId = currentQuestion.id;
+
+    // Update user answers
+    final newUserAnswers = Map<String, int>.from(state.userAnswers);
+    newUserAnswers[questionId] = answerIndex;
+
+    // Update statistics
+    final newCorrectAnswers = isCorrect
+      ? state.correctAnswers + 1
+      : state.correctAnswers;
+    final newTotalAnswered = state.totalAnswered + 1;
+
+    state = state.copyWith(
+      selectedAnswerIndex: answerIndex,
+      showExplanation: true,
+      userAnswers: newUserAnswers,
+      correctAnswers: newCorrectAnswers,
+      totalAnswered: newTotalAnswered,
+    );
+
+    // Update question statistics in database
+    await DatabaseService().updateQuestionStats(
+      questionId: questionId,
+      isCorrect: isCorrect,
+    );
+  }
+
+  // Retry current session
+  Future<void> retrySession() async {
+    if (state.questions.isEmpty) return;
+
+    state = state.copyWith(
+      currentQuestionIndex: 0,
+      userAnswers: {},
+      correctAnswers: 0,
+      totalAnswered: 0,
+      showExplanation: false,
+      selectedAnswerIndex: null,
+    );
   }
 
   // Get session statistics

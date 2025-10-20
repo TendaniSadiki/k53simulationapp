@@ -50,7 +50,10 @@ class _EnhancedAchievementsScreenState extends ConsumerState<EnhancedAchievement
       // Load user profile for point display
       final userId = SupabaseService.currentUserId;
       if (userId != null) {
-        _userProfile = await DatabaseService.getUserProfile(userId);
+        final profileData = await DatabaseService.getUserProfile(userId);
+        if (profileData != null) {
+          _userProfile = UserProfile.fromSupabase(profileData);
+        }
       }
 
       setState(() {

@@ -1,8 +1,8 @@
-                  import 'package:flutter/material.dart';
-                  import 'package:flutter_riverpod/flutter_riverpod.dart';
-                  import '../providers/asset_management_provider.dart';
-                  import '../../../../shared/widgets/safe_image_widget.dart';
-                  import '../../../../core/models/road_sign_asset.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/asset_management_provider.dart';
+import '../../../../shared/widgets/safe_image_widget.dart';
+import '../../../../core/models/road_sign_asset.dart';
 
 class AssetStorageDashboard extends ConsumerWidget {
   const AssetStorageDashboard({super.key});
@@ -21,8 +21,8 @@ class AssetStorageDashboard extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => notifier.importExistingAssets(),
-            tooltip: 'Import Existing Assets',
+            onPressed: () => notifier.loadAssets(),
+            tooltip: 'Refresh Assets',
           ),
           IconButton(
             icon: const Icon(Icons.add),
@@ -33,9 +33,6 @@ class AssetStorageDashboard extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Search Bar
-          _buildSearchBar(notifier, state.searchQuery),
-          
           // Statistics Overview
           _buildStatisticsOverview(state),
           
@@ -56,31 +53,12 @@ class AssetStorageDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildSearchBar(AssetManagementNotifier notifier, String searchQuery) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: TextField(
-        controller: TextEditingController(text: searchQuery),
-        decoration: InputDecoration(
-          hintText: 'Search all assets...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () => notifier.clearSearch(),
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        onChanged: notifier.setSearchQuery,
-      ),
-    );
-  }
-
   Widget _buildStatisticsOverview(AssetManagementState state) {
-    final stats = state.statistics;
+    final stats = {
+      'total_assets': state.totalAssets,
+      'total_buckets': state.totalBuckets,
+      'total_usage_mb': (state.totalStorageUsage / (1024 * 1024)).toStringAsFixed(2),
+    };
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -104,7 +82,7 @@ class AssetStorageDashboard extends ConsumerWidget {
           ),
           _buildStatItem(
             'Storage',
-            stats['formatted_total_size'],
+            '${stats['total_usage_mb']} MB',
             Icons.storage,
           ),
         ],
@@ -136,7 +114,7 @@ class AssetStorageDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildBucketNavigation(AssetManagementState state, AssetManagementNotifier notifier) {
+  Widget _buildBucketNavigation(AssetManagementState state, AssetManagementProvider notifier) {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -147,14 +125,14 @@ class AssetStorageDashboard extends ConsumerWidget {
           _buildBucketChip(
             'All Buckets',
             null,
-            state.selectedBucketId == null,
+            state.selectedBucket == null,
             notifier,
           ),
           // Individual buckets
           ...state.buckets.map((bucket) => _buildBucketChip(
             bucket.name,
-            bucket.id,
-            state.selectedBucketId == bucket.id,
+            bucket.name,
+            state.selectedBucket == bucket.name,
             notifier,
           )),
         ],
@@ -166,7 +144,7 @@ class AssetStorageDashboard extends ConsumerWidget {
     String label,
     String? bucketId,
     bool isSelected,
-    AssetManagementNotifier notifier,
+    AssetManagementProvider notifier,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -182,7 +160,7 @@ class AssetStorageDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildContentArea(AssetManagementState state, AssetManagementNotifier notifier) {
+  Widget _buildContentArea(AssetManagementState state, AssetManagementProvider notifier) {
     if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -209,22 +187,18 @@ class AssetStorageDashboard extends ConsumerWidget {
       );
     }
 
-    // Show global search results if searching
-    if (state.searchQuery.isNotEmpty) {
-      final globalResults = state.globallySearchedAssets;
-      return _buildAssetGrid(globalResults, notifier, 'Search Results');
-    }
-
     // Show bucket-specific content
-    final assets = state.filteredAssets;
-    final bucketName = state.selectedBucket?.name ?? 'All Buckets';
+    final assets = state.selectedBucket != null 
+        ? notifier.getAssetsByBucket(state.selectedBucket!)
+        : state.assets;
+    final bucketName = state.selectedBucket ?? 'All Buckets';
     
     return _buildAssetGrid(assets, notifier, bucketName);
   }
 
   Widget _buildAssetGrid(
     List<RoadSignAsset> assets,
-    AssetManagementNotifier notifier,
+    AssetManagementProvider notifier,
     String title,
   ) {
     if (assets.isEmpty) {
@@ -280,7 +254,7 @@ class AssetStorageDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildAssetCard(RoadSignAsset asset, AssetManagementNotifier notifier) {
+  Widget _buildAssetCard(RoadSignAsset asset, AssetManagementProvider notifier) {
     return Card(
       elevation: 2,
       child: Column(
@@ -294,7 +268,7 @@ class AssetStorageDashboard extends ConsumerWidget {
                 color: Colors.grey[100],
               ),
               child: SafeImageWidget(
-                imagePath: asset.filePath,
+                imagePath: asset.filePath ?? '',
                 fit: BoxFit.contain,
                 placeholder: Container(
                   color: Colors.grey[200],
@@ -311,7 +285,7 @@ class AssetStorageDashboard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  asset.displayName,
+                  asset.fileName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -320,22 +294,12 @@ class AssetStorageDashboard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  '${asset.width}x${asset.height} • ${asset.formattedFileSize}',
+                  '${asset.width}x${asset.height} • ${asset.fileSize} bytes',
                   style: TextStyle(
                     fontSize: 10,
                     color: Colors.grey[600],
                   ),
                 ),
-                if (asset.location != null)
-                  Text(
-                    asset.location!,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[600],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
               ],
             ),
           ),
@@ -344,10 +308,9 @@ class AssetStorageDashboard extends ConsumerWidget {
     );
   }
 
-  void _showCreateBucketDialog(BuildContext context, AssetManagementNotifier notifier) {
+  void _showCreateBucketDialog(BuildContext context, AssetManagementProvider notifier) {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
-    final categoryController = TextEditingController();
 
     showDialog(
       context: context,
@@ -370,13 +333,6 @@ class AssetStorageDashboard extends ConsumerWidget {
                 hintText: 'e.g., Collection of regulatory road signs',
               ),
             ),
-            TextField(
-              controller: categoryController,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                hintText: 'e.g., regulatory, warning, information',
-              ),
-            ),
           ],
         ),
         actions: [
@@ -387,12 +343,10 @@ class AssetStorageDashboard extends ConsumerWidget {
           ElevatedButton(
             onPressed: () {
               if (nameController.text.isNotEmpty &&
-                  descriptionController.text.isNotEmpty &&
-                  categoryController.text.isNotEmpty) {
+                  descriptionController.text.isNotEmpty) {
                 notifier.createBucket(
-                  name: nameController.text,
+                  bucketName: nameController.text,
                   description: descriptionController.text,
-                  category: categoryController.text,
                 );
                 Navigator.of(context).pop();
               }
@@ -406,7 +360,7 @@ class AssetStorageDashboard extends ConsumerWidget {
 
   void _showUploadDialog(
     BuildContext context,
-    AssetManagementNotifier notifier,
+    AssetManagementProvider notifier,
     AssetManagementState state,
   ) {
     // This would typically use file_picker or similar package

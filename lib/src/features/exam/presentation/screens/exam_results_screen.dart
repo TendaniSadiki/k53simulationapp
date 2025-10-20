@@ -132,16 +132,9 @@ class _ExamResultsScreenState extends ConsumerState<ExamResultsScreen> {
 
   void _shareResults(BuildContext context, int score, int totalQuestions, double percentage) {
     final shareService = ShareService();
-    final message = 'I scored $score/$totalQuestions (${percentage.toStringAsFixed(1)}%) on my K53 mock exam! '
-                   'Download the app to practice for your learner\'s license.';
+    final passed = percentage >= 70;
     
-    final content = ShareContent(
-      title: 'K53 Exam Results',
-      message: message,
-      deepLink: 'https://k53app.com/download?utm_source=exam_results&utm_medium=whatsapp',
-    );
-    
-    shareService.shareViaWhatsApp(content);
+    shareService.shareExamResult(score, totalQuestions, passed);
   }
 
   @override

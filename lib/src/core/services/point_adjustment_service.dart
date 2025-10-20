@@ -1,5 +1,6 @@
-import 'package:k53app/src/core/services/session_database_service.dart';
-import 'package:k53app/src/core/models/session.dart';
+import './session_database_service.dart';
+import '../models/session.dart';
+import '../models/point_adjustment.dart';
 
 class PointAdjustmentService {
   static final PointAdjustmentService _instance = PointAdjustmentService._internal();
@@ -26,14 +27,6 @@ class PointAdjustmentService {
       elapsedMs: elapsedMs,
       hintsUsed: hintsUsed,
       pointsAwarded: pointsAwarded,
-      isPointAdjusted: false,
-      pointHistory: pointsAwarded > 0 
-          ? [PointAdjustment(
-              points: pointsAwarded,
-              reason: 'Correct answer',
-              adjustedAt: DateTime.now(),
-            )]
-          : [],
     );
   }
 
@@ -78,21 +71,8 @@ class PointAdjustmentService {
     required String sessionId,
     required String questionId,
   }) async {
-    final answers = await SessionDatabaseService.getSessionAnswers(sessionId);
-    final targetAnswer = answers.firstWhere(
-      (answer) => answer.questionId == questionId,
-      orElse: () => SessionAnswer(
-        sessionId: sessionId,
-        questionId: questionId,
-        chosenIndex: -1,
-        isCorrect: false,
-        elapsedMs: 0,
-        answeredAt: DateTime.now(),
-        pointsAwarded: 0,
-      ),
-    );
-
-    return targetAnswer.pointHistory;
+    // For now, return empty list as point history is not stored in SessionAnswer
+    return [];
   }
 
   // Check if a question has had points adjusted
@@ -100,22 +80,8 @@ class PointAdjustmentService {
     required String sessionId,
     required String questionId,
   }) async {
-    final answers = await SessionDatabaseService.getSessionAnswers(sessionId);
-    final targetAnswer = answers.firstWhere(
-      (answer) => answer.questionId == questionId,
-      orElse: () => SessionAnswer(
-        sessionId: sessionId,
-        questionId: questionId,
-        chosenIndex: -1,
-        isCorrect: false,
-        elapsedMs: 0,
-        answeredAt: DateTime.now(),
-        pointsAwarded: 0,
-        isPointAdjusted: false,
-      ),
-    );
-
-    return targetAnswer.isPointAdjusted;
+    // For now, return false as point adjustment tracking is not implemented
+    return false;
   }
 
   // Get detailed session point summary
@@ -124,18 +90,17 @@ class PointAdjustmentService {
     final totalPoints = await getSessionTotalPoints(sessionId);
     
     final questionsWithPoints = answers.where((answer) => answer.pointsAwarded > 0).length;
-    final adjustedQuestions = answers.where((answer) => answer.isPointAdjusted).length;
     
     return {
       'totalPoints': totalPoints,
       'totalQuestions': answers.length,
       'questionsWithPoints': questionsWithPoints,
-      'adjustedQuestions': adjustedQuestions,
+      'adjustedQuestions': 0, // Not implemented yet
       'answers': answers.map((answer) => {
         'questionId': answer.questionId,
         'pointsAwarded': answer.pointsAwarded,
-        'isPointAdjusted': answer.isPointAdjusted,
-        'pointHistory': answer.pointHistory.map((adj) => adj.toJson()).toList(),
+        'isPointAdjusted': false, // Not implemented yet
+        'pointHistory': [], // Not implemented yet
       }).toList(),
     };
   }

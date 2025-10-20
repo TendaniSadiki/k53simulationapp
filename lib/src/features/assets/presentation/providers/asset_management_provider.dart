@@ -78,8 +78,8 @@ class AssetManagementProvider extends StateNotifier<AssetManagementState> {
 
       // Track analytics
       await AnalyticsService.trackEvent(
-        eventType: 'assets_loaded',
-        metadata: {
+        eventName: 'assets_loaded',
+        properties: {
           'total_assets': assets.length,
           'total_buckets': buckets.length,
           'total_storage_usage': storageUsage.values.fold(0, (sum, value) => sum + value),
@@ -131,8 +131,8 @@ class AssetManagementProvider extends StateNotifier<AssetManagementState> {
 
       // Track analytics
       await AnalyticsService.trackEvent(
-        eventType: 'asset_uploaded',
-        metadata: {
+        eventName: 'asset_uploaded',
+        properties: {
           'bucket_name': bucketName,
           'asset_name': asset.fileName,
           'file_size': fileSize,
@@ -187,8 +187,8 @@ class AssetManagementProvider extends StateNotifier<AssetManagementState> {
 
       // Track analytics
       await AnalyticsService.trackEvent(
-        eventType: 'asset_deleted',
-        metadata: {
+        eventName: 'asset_deleted',
+        properties: {
           'asset_id': assetId,
           'bucket_name': bucketName,
           'file_size': fileSize,
@@ -230,8 +230,8 @@ class AssetManagementProvider extends StateNotifier<AssetManagementState> {
 
       // Track analytics
       await AnalyticsService.trackEvent(
-        eventType: 'bucket_created',
-        metadata: {
+        eventName: 'bucket_created',
+        properties: {
           'bucket_name': bucketName,
           'description': description,
         },
@@ -275,8 +275,8 @@ class AssetManagementProvider extends StateNotifier<AssetManagementState> {
 
       // Track analytics
       await AnalyticsService.trackEvent(
-        eventType: 'bucket_deleted',
-        metadata: {
+        eventName: 'bucket_deleted',
+        properties: {
           'bucket_name': bucketName,
         },
       );

@@ -44,7 +44,7 @@ class _K53AppState extends ConsumerState<K53App> {
     
     // Only check for sessions if user is authenticated
     final authState = ref.read(authProvider);
-    final isAuthenticated = authState.value?.session != null;
+    final isAuthenticated = authState.session != null;
     
     if (!isAuthenticated) {
       if (mounted) {
@@ -226,7 +226,7 @@ class _K53AppState extends ConsumerState<K53App> {
   Widget build(BuildContext context) {
     // Watch auth state to rebuild when auth changes
     final authState = ref.watch(authProvider);
-    final isAuthenticated = authState.value?.session != null;
+    final isAuthenticated = authState.session != null;
     
     // Check for sessions when authentication state changes from unauthenticated to authenticated
     if (isAuthenticated && !_sessionRecoveryChecked) {

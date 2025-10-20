@@ -10,6 +10,8 @@ final gamificationProvider = StateNotifierProvider<GamificationProvider, Gamific
 class GamificationState {
   final int totalPoints;
   final int level;
+  final int points;
+  final int nextLevelPoints;
   final List<GamificationAchievement> unlockedAchievements;
   final List<GamificationAchievement> availableAchievements;
   final bool isLoading;
@@ -21,6 +23,8 @@ class GamificationState {
   GamificationState({
     this.totalPoints = 0,
     this.level = 1,
+    this.points = 0,
+    this.nextLevelPoints = 1000,
     this.unlockedAchievements = const [],
     this.availableAchievements = const [],
     this.isLoading = false,
@@ -33,6 +37,8 @@ class GamificationState {
   GamificationState copyWith({
     int? totalPoints,
     int? level,
+    int? points,
+    int? nextLevelPoints,
     List<GamificationAchievement>? unlockedAchievements,
     List<GamificationAchievement>? availableAchievements,
     bool? isLoading,
@@ -44,6 +50,8 @@ class GamificationState {
     return GamificationState(
       totalPoints: totalPoints ?? this.totalPoints,
       level: level ?? this.level,
+      points: points ?? this.points,
+      nextLevelPoints: nextLevelPoints ?? this.nextLevelPoints,
       unlockedAchievements: unlockedAchievements ?? this.unlockedAchievements,
       availableAchievements: availableAchievements ?? this.availableAchievements,
       isLoading: isLoading ?? this.isLoading,
@@ -77,7 +85,7 @@ class GamificationAchievement {
   final String title;
   final String description;
   final int points;
-  final AchievementType type;
+  final GamificationAchievementType type;
   final int targetValue;
   final int currentProgress;
   final bool isUnlocked;
@@ -108,7 +116,7 @@ class GamificationAchievement {
     String? title,
     String? description,
     int? points,
-    AchievementType? type,
+    GamificationAchievementType? type,
     int? targetValue,
     int? currentProgress,
     bool? isUnlocked,
@@ -130,7 +138,7 @@ class GamificationAchievement {
   }
 }
 
-enum AchievementType {
+enum GamificationAchievementType {
   studyStreak,
   perfectScore,
   categoryMaster,
@@ -173,6 +181,29 @@ class GamificationProvider extends StateNotifier<GamificationState> {
       state = state.copyWith(
         isLoading: false,
         error: 'Failed to load user data: $e',
+      );
+    }
+  }
+
+  // Load user stats for gamification
+  Future<void> loadUserStats() async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+
+      final userId = 'current_user'; // This should be replaced with actual user ID
+      final stats = await GamificationService().getUserStats();
+      
+      state = state.copyWith(
+        points: stats['points'] as int? ?? 0,
+        totalPoints: stats['points'] as int? ?? 0,
+        level: stats['level'] as int? ?? 1,
+        nextLevelPoints: stats['next_level_points'] as int? ?? 1000,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load user stats: $e',
       );
     }
   }
@@ -396,9 +427,9 @@ class GamificationProvider extends StateNotifier<GamificationState> {
           title: data['title'] as String? ?? 'Unknown Achievement',
           description: data['description'] as String? ?? '',
           points: data['points'] as int? ?? 0,
-          type: AchievementType.values.firstWhere(
+          type: GamificationAchievementType.values.firstWhere(
             (type) => type.toString() == data['type'],
-            orElse: () => AchievementType.studyStreak,
+            orElse: () => GamificationAchievementType.studyStreak,
           ),
           targetValue: data['target_value'] as int? ?? 0,
           currentProgress: data['progress'] as int? ?? 0,
@@ -421,7 +452,7 @@ class GamificationProvider extends StateNotifier<GamificationState> {
         title: 'First Steps',
         description: 'Complete your first study session',
         points: 100,
-        type: AchievementType.studyStreak,
+        type: GamificationAchievementType.studyStreak,
         targetValue: 1,
       ),
       GamificationAchievement(
@@ -429,7 +460,7 @@ class GamificationProvider extends StateNotifier<GamificationState> {
         title: 'Perfect Score',
         description: 'Get 100% correct in a study session',
         points: 250,
-        type: AchievementType.perfectScore,
+        type: GamificationAchievementType.perfectScore,
         targetValue: 1,
       ),
       GamificationAchievement(
@@ -437,7 +468,7 @@ class GamificationProvider extends StateNotifier<GamificationState> {
         title: 'Weekly Warrior',
         description: 'Maintain a 7-day study streak',
         points: 500,
-        type: AchievementType.studyStreak,
+        type: GamificationAchievementType.studyStreak,
         targetValue: 7,
       ),
       GamificationAchievement(
@@ -445,7 +476,7 @@ class GamificationProvider extends StateNotifier<GamificationState> {
         title: 'Category Master',
         description: 'Master all questions in a category',
         points: 300,
-        type: AchievementType.categoryMaster,
+        type: GamificationAchievementType.categoryMaster,
         targetValue: 1,
       ),
       GamificationAchievement(
@@ -453,7 +484,7 @@ class GamificationProvider extends StateNotifier<GamificationState> {
         title: 'Speed Demon',
         description: 'Answer 10 questions in under 2 minutes',
         points: 200,
-        type: AchievementType.speedDemon,
+        type: GamificationAchievementType.speedDemon,
         targetValue: 10,
       ),
     ];
@@ -524,6 +555,91 @@ class GamificationProvider extends StateNotifier<GamificationState> {
           achievementId: streakAchievement.id,
         );
       }
+    }
+  }
+
+  // Track exam session completion for gamification
+  Future<void> trackExamSessionComplete({
+    required int correctAnswers,
+    required int totalQuestions,
+    required String category,
+    required bool passed,
+  }) async {
+    try {
+      // Award points based on exam performance
+      final basePoints = 50; // Base points for completing exam
+      final accuracyBonus = ((correctAnswers / totalQuestions) * 100).round();
+      final passBonus = passed ? 100 : 0;
+      final totalPoints = basePoints + accuracyBonus + passBonus;
+
+      // Get current user ID (you might need to pass this as parameter)
+      final userId = 'current_user'; // This should be replaced with actual user ID
+
+      await awardPoints(
+        userId: userId,
+        points: totalPoints,
+        activityType: 'exam_completed',
+        category: category,
+      );
+
+      // Track analytics
+      await AnalyticsService.trackGamificationEvent(
+        eventType: 'exam_completed',
+        points: totalPoints,
+        metadata: {
+          'correct_answers': correctAnswers,
+          'total_questions': totalQuestions,
+          'category': category,
+          'passed': passed,
+          'accuracy': accuracyBonus,
+        },
+      );
+
+    } catch (e) {
+      state = state.copyWith(
+        error: 'Failed to track exam session: $e',
+      );
+    }
+  }
+
+  // Track study session completion for gamification
+  Future<void> trackStudySessionComplete({
+    required int correctAnswers,
+    required int totalQuestions,
+    required String category,
+  }) async {
+    try {
+      // Award points based on study performance
+      final basePoints = 10; // Base points for completing study session
+      final accuracyBonus = ((correctAnswers / totalQuestions) * 50).round();
+      final totalPoints = basePoints + accuracyBonus;
+
+      // Get current user ID (you might need to pass this as parameter)
+      final userId = 'current_user'; // This should be replaced with actual user ID
+
+      await awardPoints(
+        userId: userId,
+        points: totalPoints,
+        activityType: 'study_completed',
+        category: category,
+      );
+
+      // Track analytics
+      await AnalyticsService.trackGamificationEvent(
+        eventType: 'study_completed',
+        points: totalPoints,
+        metadata: {
+          'correct_answers': correctAnswers,
+          'total_questions': totalQuestions,
+          'category': category,
+          'accuracy': accuracyBonus,
+        },
+      );
+
+    } catch (e) {
+      state = state.copyWith(
+        error: 'Failed to track study session: $e',
+      );
     }
   }
 }

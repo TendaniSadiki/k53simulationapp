@@ -52,9 +52,6 @@ void main() async {
       ],
       correctIndex: 0,
       explanation: 'This is a stop sign',
-      version: 1,
-      isActive: true,
-      difficultyLevel: 2,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     ),
@@ -70,9 +67,6 @@ void main() async {
       ],
       correctIndex: 0,
       explanation: 'Speed limit is 60 km/h in residential areas',
-      version: 1,
-      isActive: true,
-      difficultyLevel: 2,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     ),
@@ -131,7 +125,7 @@ void main() async {
 
   print('✓ Point history for q1:');
   for (final adjustment in pointHistory) {
-    print('  - ${adjustment.points} points: ${adjustment.reason} at ${adjustment.adjustedAt}');
+    print('  - ${adjustment.adjustedPoints} points: ${adjustment.reason} at ${adjustment.adjustedAt}');
   }
 
   // Test 5: Get session point summary
@@ -191,7 +185,7 @@ void main() async {
 
   print('✓ Final point history for q1:');
   for (final adjustment in finalHistory) {
-    print('  - ${adjustment.points} points: ${adjustment.reason}');
+    print('  - ${adjustment.adjustedPoints} points: ${adjustment.reason}');
   }
 
   // Clean up

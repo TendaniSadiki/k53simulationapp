@@ -37,7 +37,10 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
     try {
       final userId = SupabaseService.currentUserId;
       if (userId != null) {
-        _userProfile = await DatabaseService.getUserProfile(userId);
+        final profileData = await DatabaseService.getUserProfile(userId);
+        if (profileData != null) {
+          _userProfile = UserProfile.fromSupabase(profileData);
+        }
       }
       
       setState(() {

@@ -97,6 +97,7 @@ class AuthProvider extends StateNotifier<AuthState> {
     required String email,
     required String password,
     String? fullName,
+    String? phone,
   }) async {
     try {
       state = state.copyWith(isLoading: true, error: null);
@@ -106,13 +107,25 @@ class AuthProvider extends StateNotifier<AuthState> {
         password: password,
         data: {
           'full_name': fullName,
+          'phone': phone,
+          'provider_type': 'email',
           'created_at': DateTime.now().toIso8601String(),
         },
       );
 
       if (response.user != null) {
-        // Create user profile
-        await _createUserProfile(response.user!, fullName: fullName);
+        print('✅ User created successfully: ${response.user!.id}');
+        print('📧 Email: $email');
+        print('📝 Full Name: $fullName');
+        print('📱 Phone: $phone');
+        print('🔐 Provider Type: email');
+        
+        // Create user profile with enhanced fields
+        await _createUserProfile(
+          response.user!,
+          fullName: fullName,
+          phone: phone,
+        );
 
         state = state.copyWith(
           user: response.user,
@@ -297,21 +310,66 @@ class AuthProvider extends StateNotifier<AuthState> {
   }
 
   // Helper methods
-  Future<void> _createUserProfile(User user, {String? fullName}) async {
+  Future<void> _createUserProfile(User user, {String? fullName, String? phone}) async {
     try {
-      await DatabaseService.updateUserProfile({
+      final profileData = {
         'id': user.id,
         'email': user.email,
         'full_name': fullName ?? user.email?.split('@').first,
+        'phone': phone,
+        'first_login': true,
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
         'total_points': 0,
         'level': 1,
-        'streak_days': 0,
-        'last_activity': DateTime.now().toIso8601String(),
-      });
+        'login_streak': 0,
+        'last_login_date': DateTime.now().toIso8601String(),
+      };
+
+      print('📋 Attempting to create user profile with data:');
+      print('   - User ID: ${user.id}');
+      print('   - Email: ${user.email}');
+      print('   - Full Name: ${profileData['full_name']}');
+      print('   - Phone: $phone');
+      print('   - First Login: true');
+      print('   - Total Points: 0');
+      print('   - Level: 1');
+      print('   - Login Streak: 0');
+
+      // Try to create profile with enhanced fields
+      try {
+        await DatabaseService.updateUserProfile(profileData);
+        print('✅ Enhanced user profile created successfully for user: ${user.id}');
+        print('📝 Profile data saved: full_name=$fullName, phone=$phone, first_login=true');
+        
+        // Verify the profile was created
+        final createdProfile = await DatabaseService.getUserProfile(user.id);
+        if (createdProfile != null) {
+          print('✅ Profile verification successful:');
+          print('   - Profile exists: true');
+          print('   - Email: ${createdProfile['email']}');
+          print('   - Full Name: ${createdProfile['full_name']}');
+          print('   - Phone: ${createdProfile['phone']}');
+        } else {
+          print('❌ Profile verification failed: Profile not found after creation');
+        }
+      } catch (e) {
+        // Fallback to basic profile creation if enhanced fields don't exist
+        print('⚠️ Enhanced profile creation failed, using basic profile: $e');
+        final basicProfileData = {
+          'id': user.id,
+          'email': user.email,
+          'full_name': fullName ?? user.email?.split('@').first,
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+        await DatabaseService.updateUserProfile(basicProfileData);
+        print('✅ Basic user profile created successfully for user: ${user.id}');
+        print('📝 Note: Run database migration to enable phone and first_login fields');
+      }
     } catch (e) {
-      print('Failed to create user profile: $e');
+      print('❌ Failed to create user profile: $e');
+      print('💡 Check if database migration 006_add_user_profile_fields.sql has been applied');
     }
   }
 
@@ -369,12 +427,13 @@ class AuthProvider extends StateNotifier<AuthState> {
     final expiresAt = session.expiresAt;
     if (expiresAt == null) return false;
 
-    return DateTime.now().isBefore(expiresAt);
+    return DateTime.now().isBefore(DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000));
   }
 
   // Get session expiry time
   DateTime? get sessionExpiry {
-    return state.session?.expiresAt;
+    final expiresAt = state.session?.expiresAt;
+    return expiresAt != null ? DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000) : null;
   }
 
   // Get time until session expiry

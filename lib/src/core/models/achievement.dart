@@ -38,6 +38,23 @@ class Achievement {
     );
   }
 
+  factory Achievement.fromSupabase(Map<String, dynamic> data) {
+    return Achievement(
+      id: data['id'] as String,
+      name: data['name'] as String,
+      description: data['description'] as String,
+      icon: data['icon'] as String,
+      points: (data['points'] is int) ? data['points'] : (data['points']?.toInt() ?? 0),
+      type: AchievementType.values.firstWhere(
+        (e) => e.toString().split('.').last == data['type'],
+        orElse: () => AchievementType.streak,
+      ),
+      targetValue: data['target_value'] as int,
+      isHidden: data['is_hidden'] ?? false,
+      createdAt: DateTime.parse(data['created_at'] as String),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -94,6 +111,21 @@ class UserAchievement {
           : null,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+    );
+  }
+
+  factory UserAchievement.fromSupabase(Map<String, dynamic> data) {
+    return UserAchievement(
+      id: data['id'] as String,
+      userId: data['user_id'] as String,
+      achievementId: data['achievement_id'] as String,
+      progress: data['progress'] as int,
+      unlocked: data['unlocked'] ?? false,
+      unlockedAt: data['unlocked_at'] != null
+          ? DateTime.parse(data['unlocked_at'] as String)
+          : null,
+      createdAt: DateTime.parse(data['created_at'] as String),
+      updatedAt: DateTime.parse(data['updated_at'] as String),
     );
   }
 

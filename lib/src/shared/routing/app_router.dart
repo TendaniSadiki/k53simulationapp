@@ -18,14 +18,15 @@ import '../../features/info/presentation/screens/test_requirements_screen.dart';
 import '../../features/gamification/presentation/screens/achievements_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/profile/presentation/screens/user_profile_screen.dart';
 import '../../core/services/supabase_service.dart';
 
 class AppRouter {
   static GoRouter router(WidgetRef ref) {
     return GoRouter(
       redirect: (context, state) async {
-        final authState = ref.read(authProvider).value;
-        final isAuthenticated = authState?.session != null;
+        final authState = ref.read(authProvider);
+        final isAuthenticated = authState.session != null;
 
         final isGoingToAuth = state.matchedLocation.startsWith('/auth');
         final isGoingToAdmin = state.matchedLocation.startsWith('/admin');
@@ -54,7 +55,7 @@ class AppRouter {
           if (isAdminDashboard) {
             // Check if user has admin role
             try {
-              final user = authState!.session!.user;
+              final user = authState.session!.user;
               final profile = await SupabaseService.client
                   .from('profiles')
                   .select('role')
@@ -77,7 +78,7 @@ class AppRouter {
         // Special case: if authenticated admin user goes to root, redirect to admin dashboard
         if (isAuthenticated && state.matchedLocation == '/') {
           try {
-            final user = authState!.session!.user;
+            final user = authState.session!.user;
             final profile = await SupabaseService.client
                 .from('profiles')
                 .select('role')
@@ -223,6 +224,14 @@ class AppRouter {
           pageBuilder: (context, state) => MaterialPage(
             key: state.pageKey,
             child: const ProgressScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/profile',
+          name: 'profile',
+          pageBuilder: (context, state) => MaterialPage(
+            key: state.pageKey,
+            child: const UserProfileScreen(),
           ),
         ),
         GoRoute(

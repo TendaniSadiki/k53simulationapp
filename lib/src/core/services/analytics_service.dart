@@ -21,6 +21,17 @@ class AnalyticsService {
     // For now, we just log to console in debug mode
   }
 
+  // Alias for trackUserEngagement - for compatibility with existing code
+  static Future<void> trackEvent({
+    required String eventName,
+    Map<String, dynamic>? properties,
+  }) async {
+    await trackUserEngagement(
+      eventName: eventName,
+      properties: properties,
+    );
+  }
+
   // Track exam session start
   static Future<void> trackExamSessionStart({
     required String sessionId,

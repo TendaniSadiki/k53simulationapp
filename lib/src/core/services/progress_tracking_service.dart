@@ -79,8 +79,6 @@ class ProgressTrackingService {
             options: [],
             correctIndex: 0,
             explanation: '',
-            version: 1,
-            isActive: true,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           ),

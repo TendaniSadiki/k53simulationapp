@@ -278,21 +278,22 @@ class GamificationIntegrationService {
       // Get current stats
       final currentStats = await DatabaseService.getUserStats(userId);
       
-      // Update stats
+      // Update stats with null safety
       final updatedStats = {
-        'total_study_sessions': (currentStats['totalSessions'] ?? 0) + studySessions,
-        'total_exam_sessions': (currentStats['totalSessions'] ?? 0) + examSessions,
-        'total_correct_answers': (currentStats['correctAnswers'] ?? 0) + correctAnswers,
-        'total_answers': (currentStats['totalAnswers'] ?? 0) + totalAnswers,
+        'total_study_sessions': (currentStats?['totalSessions'] ?? 0) + studySessions,
+        'total_exam_sessions': (currentStats?['totalSessions'] ?? 0) + examSessions,
+        'total_correct_answers': (currentStats?['correctAnswers'] ?? 0) + correctAnswers,
+        'total_answers': (currentStats?['totalAnswers'] ?? 0) + totalAnswers,
       };
 
       // Update in database
-      await DatabaseService.updateUserStats(
-        userId: userId,
-        points: updatedStats['total_correct_answers'] ?? 0,
-        level: _calculateLevel(updatedStats['total_correct_answers'] ?? 0),
-        unlockedAchievements: 0, // This would need to be calculated
-      );
+      await DatabaseService.updateUserStats({
+        'user_id': userId,
+        'total_points': updatedStats['total_correct_answers'] ?? 0,
+        'level': _calculateLevel(updatedStats['total_correct_answers'] ?? 0),
+        'unlocked_achievements': 0, // This would need to be calculated
+        'updated_at': DateTime.now().toIso8601String(),
+      });
 
     } catch (e) {
       print('Error updating user stats: $e');
@@ -417,13 +418,13 @@ class GamificationIntegrationService {
           'progress': userAchievements.where((ua) => !ua.unlocked).length,
         },
         'profile': {
-          'dailyPoints': userProfile?.dailyPoints ?? 0,
-          'gamingPoints': userProfile?.gamingPoints ?? 0,
-          'totalPoints': userProfile?.totalPoints ?? 0,
-          'level': userProfile?.level ?? 1,
-          'loginStreak': userProfile?.loginStreak ?? 0,
+          'dailyPoints': userProfile?['daily_points'] ?? 0,
+          'gamingPoints': userProfile?['gaming_points'] ?? 0,
+          'totalPoints': userProfile?['total_points'] ?? 0,
+          'level': userProfile?['level'] ?? 1,
+          'loginStreak': userProfile?['login_streak'] ?? 0,
         },
-        'nextLevelPoints': _calculateNextLevelPoints(userProfile?.level ?? 1),
+        'nextLevelPoints': _calculateNextLevelPoints(userProfile?['level'] ?? 1),
       };
 
     } catch (e) {

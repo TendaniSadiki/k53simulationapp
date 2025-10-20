@@ -47,7 +47,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     await notifier.loadQuestions(
       category: _selectedCategory,
       learnerCode: _selectedLearnerCode,
-      limit: 10,
+      questionCount: 10,
     );
   }
 
@@ -88,11 +88,12 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
       final previousQuestion = state.questions[state.currentQuestionIndex - 1];
       
       // Handle point adjustment for navigation back
-      if (state.sessionId != null) {
-        GamificationService().handleNavigationBack(
-          sessionId: state.sessionId!,
-          questionId: previousQuestion.id,
-        );
+      if (state.currentSession?.id != null) {
+        // TODO: Implement navigation back handling for gamification
+        // GamificationService().handleNavigationBack(
+        //   sessionId: state.currentSession!.id,
+        //   questionId: previousQuestion.id,
+        // );
         
         // Update points display (deduct 1 point if previously awarded)
         setState(() {
@@ -447,11 +448,12 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                   // Track gamification progress
                   if (state.questions.isNotEmpty) {
                     final category = state.questions.first.category;
-                    ref.read(gamificationProvider.notifier).trackStudySessionComplete(
-                      correctAnswers: state.correctAnswers,
-                      totalQuestions: state.totalAnswered,
-                      category: category,
-                    );
+                    // TODO: Implement study session completion tracking for gamification
+                    // ref.read(gamificationProvider.notifier).trackStudySessionComplete(
+                    //   correctAnswers: state.correctAnswers,
+                    //   totalQuestions: state.totalAnswered,
+                    //   category: category,
+                    // );
                   }
                   
                   await _retrySession();

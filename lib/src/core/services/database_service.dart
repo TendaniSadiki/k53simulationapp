@@ -315,12 +315,32 @@ class DatabaseService {
 
   static Future<void> updateUserProfile(Map<String, dynamic> profile) async {
     try {
-      await SupabaseService.client
+      // First try to update existing profile
+      final response = await SupabaseService.client
           .from('profiles')
           .update(profile)
           .eq('id', profile['id']);
+
+      // If no rows were updated, insert new profile
+      if (response == null || (response is List && response.isEmpty)) {
+        await SupabaseService.client
+            .from('profiles')
+            .insert(profile);
+        print('✅ New user profile created: ${profile['id']}');
+      } else {
+        print('✅ User profile updated: ${profile['id']}');
+      }
     } catch (e) {
       print('Error updating user profile: $e');
+      // Try insert as fallback
+      try {
+        await SupabaseService.client
+            .from('profiles')
+            .insert(profile);
+        print('✅ User profile created via fallback: ${profile['id']}');
+      } catch (insertError) {
+        print('❌ Failed to create user profile: $insertError');
+      }
     }
   }
 

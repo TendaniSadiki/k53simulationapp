@@ -1,6 +1,7 @@
 import '../models/achievement.dart';
 import '../models/session.dart';
 import '../models/user_profile.dart';
+import '../models/point_adjustment.dart';
 import './database_service.dart';
 import './supabase_service.dart';
 import './offline_database_service.dart';
@@ -22,14 +23,14 @@ class GamificationService {
 
     try {
       // Get all achievements of this type
-      final achievements = await DatabaseService.getAchievementsByType(type);
+      final achievementsData = await DatabaseService.getAchievementsByType(type.name);
       
-      for (final achievement in achievements) {
+      for (final achievementData in achievementsData) {
+        final achievement = Achievement.fromSupabase(achievementData);
+        
         // Check if user already has this achievement
-        final userAchievement = await DatabaseService.getUserAchievement(
-          userId: currentUserId,
-          achievementId: achievement.id,
-        );
+        final userAchievementData = await DatabaseService.getUserAchievement(currentUserId, achievement.id);
+        final userAchievement = userAchievementData != null ? UserAchievement.fromSupabase(userAchievementData) : null;
 
         if (userAchievement != null && userAchievement.unlocked) {
           continue; // Already unlocked
@@ -40,24 +41,13 @@ class GamificationService {
         
         if (newProgress >= achievement.targetValue) {
           // Unlock achievement
-          await DatabaseService.unlockAchievement(
-            userId: currentUserId,
-            achievementId: achievement.id,
-            progress: achievement.targetValue,
-          );
+          await DatabaseService.unlockAchievement(currentUserId, achievement.id);
           
           // Track achievement unlock in analytics
-          await DatabaseService.trackAchievementUnlocked(
-            userId: currentUserId,
-            achievementId: achievement.id,
-          );
+          await DatabaseService.trackAchievementUnlocked(currentUserId, achievement.id);
         } else {
           // Update progress
-          await DatabaseService.updateAchievementProgress(
-            userId: currentUserId,
-            achievementId: achievement.id,
-            progress: newProgress,
-          );
+          await DatabaseService.updateAchievementProgress(currentUserId, achievement.id, newProgress);
         }
       }
     } catch (e) {
@@ -127,22 +117,28 @@ class GamificationService {
     if (userId == null) return;
 
     try {
-      final userProfile = await DatabaseService.getUserProfile(userId);
+      final userProfileData = await DatabaseService.getUserProfile(userId);
       final now = DateTime.now();
       
-      final updatedProfile = userProfile?.addGamingPoints(points) ?? UserProfile(
-        id: userId,
-        handle: userProfile?.handle,
-        learnerCode: userProfile?.learnerCode ?? 0,
-        locale: userProfile?.locale ?? 'en',
-        studyGoalDate: userProfile?.studyGoalDate,
-        createdAt: userProfile?.createdAt ?? now,
-        updatedAt: now,
-        gamingPoints: points,
-        totalPoints: points,
-      );
+      UserProfile updatedProfile;
+      if (userProfileData != null) {
+        final userProfile = UserProfile.fromSupabase(userProfileData);
+        updatedProfile = userProfile.addGamingPoints(points);
+      } else {
+        updatedProfile = UserProfile(
+          id: userId,
+          handle: null,
+          learnerCode: 0,
+          locale: 'en',
+          studyGoalDate: null,
+          createdAt: now,
+          updatedAt: now,
+          gamingPoints: points,
+          totalPoints: points,
+        );
+      }
       
-      await DatabaseService.updateUserProfile(updatedProfile);
+      await DatabaseService.updateUserProfile(updatedProfile.toSupabase());
       
       // Track offline activity for gaming points
       await trackOfflineActivity(
@@ -284,61 +280,69 @@ class GamificationService {
     if (userId == null) return;
 
     try {
-      final userProfile = await DatabaseService.getUserProfile(userId);
+      final userProfileData = await DatabaseService.getUserProfile(userId);
       final now = DateTime.now();
       
-      // Check if user can claim daily points today
-      final canClaimDailyPoints = userProfile?.canClaimDailyPoints() ?? true;
-      final hasLoggedInToday = userProfile?.hasLoggedInToday() ?? false;
-      
-      if (!hasLoggedInToday) {
-        // Calculate new streak
-        final currentStreak = userProfile?.loginStreak ?? 0;
-        final newStreak = (userProfile?.lastLoginDate != null &&
-                          now.difference(userProfile!.lastLoginDate!).inHours <= 28)
-            ? currentStreak + 1
-            : 1;
+      if (userProfileData != null) {
+        final userProfile = UserProfile.fromSupabase(userProfileData);
         
-        // Update user profile with new streak and login date
-        final updatedProfile = userProfile?.updateLoginStreak(newStreak) ?? UserProfile(
+        // Check if user can claim daily points today
+        final canClaimDailyPoints = userProfile.canClaimDailyPoints();
+        final hasLoggedInToday = userProfile.hasLoggedInToday();
+        
+        if (!hasLoggedInToday) {
+          // Calculate new streak
+          final currentStreak = userProfile.loginStreak;
+          final newStreak = (userProfile.lastLoginDate != null &&
+                            now.difference(userProfile.lastLoginDate!).inHours <= 28)
+              ? currentStreak + 1
+              : 1;
+          
+          // Update user profile with new streak and login date
+          var updatedProfile = userProfile.updateLoginStreak(newStreak);
+          await DatabaseService.updateUserProfile(updatedProfile.toSupabase());
+          
+          // Award daily points if eligible
+          if (canClaimDailyPoints) {
+            final dailyPoints = _calculateDailyPoints(newStreak);
+            
+            // Update user profile with daily points
+            final pointsProfile = updatedProfile.addDailyPoints(dailyPoints);
+            await DatabaseService.updateUserProfile(pointsProfile.toSupabase());
+            
+            // Track streak achievements
+            await trackProgress(
+              type: AchievementType.streak,
+              value: newStreak,
+              userId: userId,
+            );
+            
+            // Track offline activity for daily login points
+            await trackOfflineActivity(
+              activityType: 'daily_login',
+              value: dailyPoints,
+              metadata: {
+                'streak': newStreak,
+                'daily_points': dailyPoints,
+                'login_date': now.toIso8601String(),
+              },
+            );
+          }
+        }
+      } else {
+        // Create new user profile if it doesn't exist
+        final newProfile = UserProfile(
           id: userId,
-          handle: userProfile?.handle,
-          learnerCode: userProfile?.learnerCode ?? 0,
-          locale: userProfile?.locale ?? 'en',
-          studyGoalDate: userProfile?.studyGoalDate,
-          createdAt: userProfile?.createdAt ?? now,
+          handle: null,
+          learnerCode: 0,
+          locale: 'en',
+          studyGoalDate: null,
+          createdAt: now,
           updatedAt: now,
-          loginStreak: newStreak,
+          loginStreak: 1,
           lastLoginDate: now,
         );
-        await DatabaseService.updateUserProfile(updatedProfile);
-        
-        // Award daily points if eligible
-        if (canClaimDailyPoints) {
-          final dailyPoints = _calculateDailyPoints(newStreak);
-          
-          // Update user profile with daily points
-          final pointsProfile = updatedProfile.addDailyPoints(dailyPoints);
-          await DatabaseService.updateUserProfile(pointsProfile);
-          
-          // Track streak achievements
-          await trackProgress(
-            type: AchievementType.streak,
-            value: newStreak,
-            userId: userId,
-          );
-          
-          // Track offline activity for daily login points
-          await trackOfflineActivity(
-            activityType: 'daily_login',
-            value: dailyPoints,
-            metadata: {
-              'streak': newStreak,
-              'daily_points': dailyPoints,
-              'login_date': now.toIso8601String(),
-            },
-          );
-        }
+        await DatabaseService.updateUserProfile(newProfile.toSupabase());
       }
     } catch (e) {
       print('Error tracking daily login: $e');
@@ -360,7 +364,8 @@ class GamificationService {
     if (userId == null) return [];
 
     try {
-      return await DatabaseService.getUserAchievements(userId);
+      final achievementsData = await DatabaseService.getUserAchievements(userId);
+      return achievementsData.map((data) => UserAchievement.fromSupabase(data)).toList();
     } catch (e) {
       print('Error getting user achievements: $e');
       return [];
@@ -386,9 +391,10 @@ class GamificationService {
       int totalPoints = 0;
       for (final userAchievement in unlockedAchievements) {
         // Fetch the achievement details to get the point value
-        final achievement = await DatabaseService.getAchievementById(userAchievement.achievementId);
-        if (achievement != null) {
-          totalPoints += achievement.points; // points is int, so this should be fine
+        final achievementData = await DatabaseService.getAchievementById(userAchievement.achievementId);
+        if (achievementData != null) {
+          final achievement = Achievement.fromSupabase(achievementData);
+          totalPoints += achievement.points;
         }
       }
       
@@ -421,46 +427,47 @@ class GamificationService {
       return {'points': 0, 'level': 1, 'unlocked_achievements': 0};
     }
   
-    // Get session point summary
-    Future<Map<String, dynamic>> getSessionPointSummary(String sessionId) async {
-      try {
-        return await PointAdjustmentService().getSessionPointSummary(sessionId);
-      } catch (e) {
-        print('Error getting session point summary: $e');
-        return {
-          'totalPoints': 0,
-          'totalQuestions': 0,
-          'questionsWithPoints': 0,
-          'adjustedQuestions': 0,
-          'answers': [],
-        };
-      }
+  }
+
+  // Get session point summary
+  Future<Map<String, dynamic>> getSessionPointSummary(String sessionId) async {
+    try {
+      return await PointAdjustmentService().getSessionPointSummary(sessionId);
+    } catch (e) {
+      print('Error getting session point summary: $e');
+      return {
+        'totalPoints': 0,
+        'totalQuestions': 0,
+        'questionsWithPoints': 0,
+        'adjustedQuestions': 0,
+        'answers': [],
+      };
     }
-  
-    // Get total points for a session
-    Future<int> getSessionTotalPoints(String sessionId) async {
-      try {
-        return await PointAdjustmentService().getSessionTotalPoints(sessionId);
-      } catch (e) {
-        print('Error getting session total points: $e');
-        return 0;
-      }
+  }
+
+  // Get total points for a session
+  Future<int> getSessionTotalPoints(String sessionId) async {
+    try {
+      return await PointAdjustmentService().getSessionTotalPoints(sessionId);
+    } catch (e) {
+      print('Error getting session total points: $e');
+      return 0;
     }
-  
-    // Get point history for a specific question
-    Future<List<PointAdjustment>> getQuestionPointHistory({
-      required String sessionId,
-      required String questionId,
-    }) async {
-      try {
-        return await PointAdjustmentService().getQuestionPointHistory(
-          sessionId: sessionId,
-          questionId: questionId,
-        );
-      } catch (e) {
-        print('Error getting question point history: $e');
-        return [];
-      }
+  }
+
+  // Get point history for a specific question
+  Future<List<PointAdjustment>> getQuestionPointHistory({
+    required String sessionId,
+    required String questionId,
+  }) async {
+    try {
+      return await PointAdjustmentService().getQuestionPointHistory(
+        sessionId: sessionId,
+        questionId: questionId,
+      );
+    } catch (e) {
+      print('Error getting question point history: $e');
+      return [];
     }
   }
 
@@ -488,7 +495,8 @@ class GamificationService {
       final allAchievements = <Achievement>[];
       
       for (final type in AchievementType.values) {
-        final achievements = await DatabaseService.getAchievementsByType(type);
+        final achievementsData = await DatabaseService.getAchievementsByType(type.name);
+        final achievements = achievementsData.map((data) => Achievement.fromSupabase(data)).toList();
         allAchievements.addAll(achievements);
       }
       

@@ -36,22 +36,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     final currentUser = SupabaseService.auth.currentUser;
 
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-      appBar: AppBar(
+        appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
           const ConnectivityIndicator(),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await SupabaseService.signOut();
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              context.go('/profile');
             },
           ),
         ],
@@ -163,11 +162,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   onTap: () => context.go('/achievements'),
                   color: Colors.pink,
                 ),
+                _buildActionCard(
+                  context,
+                  icon: Icons.person,
+                  title: 'Profile',
+                  subtitle: 'Your account & stats',
+                  onTap: () => context.go('/profile'),
+                  color: Colors.blueGrey,
+                ),
               ],
             ),
           ],
         ),
-      ),
+        ),
       ),
     );
   }
