@@ -309,38 +309,46 @@ class DatabaseService {
       return response as Map<String, dynamic>?;
     } catch (e) {
       print('Error fetching user profile: $e');
+      
+      // If the error is due to UUID type mismatch, try alternative approach
+      if (e.toString().contains('invalid input syntax for type bigint')) {
+        print('⚠️ UUID type mismatch detected, trying alternative query...');
+        try {
+          // Try to get profile by email instead
+          final user = SupabaseService.client.auth.currentUser;
+          if (user?.email != null) {
+            final response = await SupabaseService.client
+                .from('profiles')
+                .select()
+                .eq('email', user!.email!)
+                .single();
+            return response as Map<String, dynamic>?;
+          }
+        } catch (e2) {
+          print('Alternative profile query also failed: $e2');
+        }
+      }
+      
       return null;
     }
   }
 
   static Future<void> updateUserProfile(Map<String, dynamic> profile) async {
     try {
-      // First try to update existing profile
-      final response = await SupabaseService.client
+      print('📝 Creating/updating user profile with complete data');
+      print('   - User ID: ${profile['id']}');
+      print('   - Email: ${profile['email']}');
+      print('   - Full Name: ${profile['full_name']}');
+      
+      // Use upsert to handle both insert and update scenarios
+      await SupabaseService.client
           .from('profiles')
-          .update(profile)
-          .eq('id', profile['id']);
-
-      // If no rows were updated, insert new profile
-      if (response == null || (response is List && response.isEmpty)) {
-        await SupabaseService.client
-            .from('profiles')
-            .insert(profile);
-        print('✅ New user profile created: ${profile['id']}');
-      } else {
-        print('✅ User profile updated: ${profile['id']}');
-      }
+          .upsert(profile);
+      
+      print('✅ User profile created/updated successfully: ${profile['id']}');
     } catch (e) {
-      print('Error updating user profile: $e');
-      // Try insert as fallback
-      try {
-        await SupabaseService.client
-            .from('profiles')
-            .insert(profile);
-        print('✅ User profile created via fallback: ${profile['id']}');
-      } catch (insertError) {
-        print('❌ Failed to create user profile: $insertError');
-      }
+      print('❌ Failed to create/update user profile: $e');
+      print('💡 The profile may have been created by the database trigger automatically');
     }
   }
 

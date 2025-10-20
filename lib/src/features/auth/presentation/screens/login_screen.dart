@@ -68,6 +68,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        
+        // Check if sign-in was successful and redirect to dashboard
+        final authState = ref.read(authProvider);
+        if (authState.status == AuthStatus.authenticated && mounted) {
+          context.go('/dashboard');
+        }
       } catch (e) {
         // Error is handled by the auth provider state
       }
@@ -85,13 +91,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           phone: _phoneController.text.trim(),
         );
         
-        // Show success message for email verification
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please check your email for verification link'),
-            ),
-          );
+        // Check if signup was successful and redirect to dashboard
+        final authState = ref.read(authProvider);
+        if (authState.status == AuthStatus.authenticated) {
+          if (mounted) {
+            // Navigate to dashboard after successful signup
+            context.go('/dashboard');
+          }
+        } else {
+          // Show success message for email verification if needed
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please check your email for verification link'),
+              ),
+            );
+          }
         }
       } catch (e) {
         // Error is handled by the auth provider state

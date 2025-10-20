@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../../../core/services/database_service.dart';
-import '../../../../core/services/progress_tracking_service.dart';
 import '../../../../core/services/progress_tracking_service.dart';
 import '../widgets/progress_chart_widget.dart';
 import '../widgets/profile_info_widget.dart';
@@ -67,6 +67,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/dashboard'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -305,6 +309,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                 Icons.settings,
                 () => _showSettings(),
               ),
+              _buildActionButton(
+                'Sign Out',
+                Icons.logout,
+                () => _signOut(),
+              ),
             ],
           ),
         ],
@@ -368,6 +377,46 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Settings functionality coming soon!')),
     );
+  }
+
+  Future<void> _signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final authNotifier = ref.read(authProvider.notifier);
+        await authNotifier.signOut();
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Signed out successfully')),
+        );
+        
+        // Navigate to login screen
+        // Note: The app router should handle the navigation automatically
+        // when the auth state changes to unauthenticated
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error signing out: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildLearningInsights() {

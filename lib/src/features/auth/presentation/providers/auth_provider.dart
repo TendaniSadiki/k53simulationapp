@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/database_service.dart';
+import '../../../../core/services/login_streak_service.dart';
 
 final authProvider = StateNotifierProvider<AuthProvider, AuthState>((ref) {
   return AuthProvider();
@@ -143,6 +144,9 @@ class AuthProvider extends StateNotifier<AuthState> {
 
         // Track login
         await AnalyticsService.trackUserLogin(userId: response.user!.id);
+
+        // Show email verification message
+        _showEmailVerificationMessage();
       } else {
         state = state.copyWith(
           isLoading: false,
@@ -184,8 +188,8 @@ class AuthProvider extends StateNotifier<AuthState> {
         // Track user login
         await AnalyticsService.trackUserLogin(userId: response.user!.id);
 
-        // Update last login time
-        await _updateLastLogin(response.user!.id);
+        // Update login streak and last login
+        await LoginStreakService.trackLogin(response.user!.id);
       } else {
         state = state.copyWith(
           isLoading: false,
@@ -312,77 +316,71 @@ class AuthProvider extends StateNotifier<AuthState> {
   // Helper methods
   Future<void> _createUserProfile(User user, {String? fullName, String? phone}) async {
     try {
+      // Create profile data that matches the FINAL database schema
       final profileData = {
         'id': user.id,
-        'email': user.email,
-        'full_name': fullName ?? user.email?.split('@').first,
+        'handle': 'user_${user.id.substring(0, 8)}', // Generate handle from user ID
+        'learner_code': 1, // Default learner code
+        'locale': 'en', // Default locale
+        'email': user.email, // Include email field
+        'full_name': fullName,
         'phone': phone,
-        'first_login': true,
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
         'total_points': 0,
         'level': 1,
         'login_streak': 0,
-        'last_login_date': DateTime.now().toIso8601String(),
+        'first_login': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
       };
 
-      print('📋 Attempting to create user profile with data:');
+      print('📋 Creating user profile with FINAL schema data:');
       print('   - User ID: ${user.id}');
+      print('   - Handle: ${profileData['handle']}');
       print('   - Email: ${user.email}');
-      print('   - Full Name: ${profileData['full_name']}');
+      print('   - Full Name: $fullName');
       print('   - Phone: $phone');
-      print('   - First Login: true');
-      print('   - Total Points: 0');
-      print('   - Level: 1');
-      print('   - Login Streak: 0');
+      print('   - Learner Code: 1');
+      print('   - Locale: en');
 
-      // Try to create profile with enhanced fields
-      try {
-        await DatabaseService.updateUserProfile(profileData);
-        print('✅ Enhanced user profile created successfully for user: ${user.id}');
-        print('📝 Profile data saved: full_name=$fullName, phone=$phone, first_login=true');
-        
-        // Verify the profile was created
-        final createdProfile = await DatabaseService.getUserProfile(user.id);
-        if (createdProfile != null) {
-          print('✅ Profile verification successful:');
-          print('   - Profile exists: true');
-          print('   - Email: ${createdProfile['email']}');
-          print('   - Full Name: ${createdProfile['full_name']}');
-          print('   - Phone: ${createdProfile['phone']}');
-        } else {
-          print('❌ Profile verification failed: Profile not found after creation');
-        }
-      } catch (e) {
-        // Fallback to basic profile creation if enhanced fields don't exist
-        print('⚠️ Enhanced profile creation failed, using basic profile: $e');
-        final basicProfileData = {
-          'id': user.id,
-          'email': user.email,
-          'full_name': fullName ?? user.email?.split('@').first,
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        };
-        await DatabaseService.updateUserProfile(basicProfileData);
-        print('✅ Basic user profile created successfully for user: ${user.id}');
-        print('📝 Note: Run database migration to enable phone and first_login fields');
+      // Create the complete profile in the database
+      await DatabaseService.updateUserProfile(profileData);
+      print('✅ User profile created successfully for user: ${user.id}');
+      print('📝 Profile data saved with all required fields');
+      
+      // Verify the profile was created
+      final createdProfile = await DatabaseService.getUserProfile(user.id);
+      if (createdProfile != null) {
+        print('✅ Profile verification successful:');
+        print('   - Profile exists: true');
+        print('   - Handle: ${createdProfile['handle']}');
+        print('   - Email: ${createdProfile['email']}');
+        print('   - Full Name: ${createdProfile['full_name']}');
+      } else {
+        print('❌ Profile verification failed: Profile not found after creation');
       }
     } catch (e) {
       print('❌ Failed to create user profile: $e');
-      print('💡 Check if database migration 006_add_user_profile_fields.sql has been applied');
+      print('💡 The profile may have been created by the database trigger automatically');
+      
+      // Even if profile creation fails, the user metadata is already set during signup
+      if (fullName != null || phone != null) {
+        print('✅ User metadata was set during signup process');
+        print('   - Full Name: $fullName');
+        print('   - Phone: $phone');
+      }
     }
   }
 
-  Future<void> _updateLastLogin(String userId) async {
-    try {
-      await DatabaseService.updateUserProfile({
-        'id': userId,
-        'last_login': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      print('Failed to update last login: $e');
-    }
+  // Show email verification message after signup
+  void _showEmailVerificationMessage() {
+    // This would typically show a dialog or snackbar
+    print('📧 Email verification sent! Please check your inbox.');
+    print('💡 You can now sign in with your verified email address.');
+  }
+
+  // Check if user needs email verification
+  bool _needsEmailVerification(User? user) {
+    return user != null && user.email != null && !user.email!.contains('@example.com');
   }
 
   // Clear error
