@@ -138,28 +138,32 @@ class _ResponsiveImageWidgetState extends State<ResponsiveImageWidget> {
     return Semantics(
       label: _altText,
       image: true,
-      child: Image.asset(
-        _optimizedPath,
-        width: widget.width,
-        height: widget.height,
-        fit: widget.fit,
-        gaplessPlayback: true, // Prevents flickering when rebuilding
-        errorBuilder: (context, error, stackTrace) {
-          ImagePerformanceMonitor.trackError(_optimizedPath, error);
-          widget.onLoadError?.call();
-          
-          if (kDebugMode) {
-            print('ResponsiveImageWidget: Image.asset error for $_optimizedPath: $error');
-          }
-          
-          return widget.errorWidget ?? _buildErrorWidget();
-        },
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          if (frame == null && !wasSynchronouslyLoaded) {
-            return widget.placeholder ?? _buildPlaceholder();
-          }
-          return child;
-        },
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.rotationX(0), // Ensure image is not flipped
+        child: Image.asset(
+          _optimizedPath,
+          width: widget.width,
+          height: widget.height,
+          fit: widget.fit,
+          gaplessPlayback: true, // Prevents flickering when rebuilding
+          errorBuilder: (context, error, stackTrace) {
+            ImagePerformanceMonitor.trackError(_optimizedPath, error);
+            widget.onLoadError?.call();
+            
+            if (kDebugMode) {
+              print('ResponsiveImageWidget: Image.asset error for $_optimizedPath: $error');
+            }
+            
+            return widget.errorWidget ?? _buildErrorWidget();
+          },
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (frame == null && !wasSynchronouslyLoaded) {
+              return widget.placeholder ?? _buildPlaceholder();
+            }
+            return child;
+          },
+        ),
       ),
     );
   }

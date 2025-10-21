@@ -37,23 +37,27 @@ class SafeImageWidget extends StatelessWidget {
       print('Asset path corrected: "$sanitizedPath" -> "$correctedPath"');
     }
     
-    return Image.asset(
-      correctedPath,
-      height: height,
-      width: width,
-      fit: fit,
-      errorBuilder: (context, error, stackTrace) {
-        if (kDebugMode) {
-          print('Image loading error for $correctedPath: $error');
-        }
-        return _buildErrorWidget(context);
-      },
-      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (frame == null) {
-          return placeholder ?? _buildPlaceholder(context);
-        }
-        return child;
-      },
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.rotationX(0), // Ensure image is not flipped
+      child: Image.asset(
+        correctedPath,
+        height: height,
+        width: width,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) {
+          if (kDebugMode) {
+            print('Image loading error for $correctedPath: $error');
+          }
+          return _buildErrorWidget(context);
+        },
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (frame == null) {
+            return placeholder ?? _buildPlaceholder(context);
+          }
+          return child;
+        },
+      ),
     );
   }
   

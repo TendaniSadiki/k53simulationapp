@@ -756,6 +756,18 @@ class ExamNotifier extends StateNotifier<ExamState> {
           'is_daily': true,
         },
       );
+
+      // Also track weekly points
+      await GamificationService().trackOfflineActivity(
+        activityType: 'weekly_points',
+        value: 10, // 10 weekly points per correct answer
+        metadata: {
+          'question_id': state.currentQuestion?.id,
+          'category': state.currentQuestion?.category,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'is_weekly': true,
+        },
+      );
     } catch (e) {
       print('Error awarding points: $e');
     }

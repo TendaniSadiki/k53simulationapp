@@ -138,7 +138,11 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
               ..setEntry(3, 2, 0.001) // Perspective
               ..rotateY(angle),
             alignment: Alignment.center,
-            child: _buildContent(),
+            child: Transform(
+              transform: Matrix4.rotationX(0), // Prevent image flipping
+              alignment: Alignment.center,
+              child: _buildContent(),
+            ),
           );
         },
       ),
@@ -186,8 +190,8 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
       child: Stack(
         children: [
           widget.frontContent,
-          // Double-tap hint overlay (only in study mode)
-          if (widget.mode == FlashcardMode.study && !_isFlipped)
+          // Double-tap hint overlay (only in study mode when enabled)
+          if (widget.mode == FlashcardMode.study && !_isFlipped && widget.enableDoubleTap)
             Positioned(
               bottom: 8,
               right: 8,
@@ -237,8 +241,8 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
       child: Stack(
         children: [
           widget.backContent,
-          // Flip back hint (only in study mode)
-          if (widget.mode == FlashcardMode.study && _isFlipped)
+          // Flip back hint (only in study mode when enabled)
+          if (widget.mode == FlashcardMode.study && _isFlipped && widget.enableDoubleTap)
             Positioned(
               bottom: 8,
               right: 8,

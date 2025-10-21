@@ -19,6 +19,11 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
   UserProfile? _userProfile;
   bool _isLoading = true;
   String? _error;
+  Map<String, dynamic>? _userStats;
+  List<Map<String, dynamic>> _userAchievements = [];
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -27,6 +32,7 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
       _loadUserProfile();
     });
   }
+
 
   Future<void> _loadUserProfile() async {
     setState(() {
@@ -37,9 +43,32 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
     try {
       final userId = SupabaseService.currentUserId;
       if (userId != null) {
+        // Load user profile
         final profileData = await DatabaseService.getUserProfile(userId);
         if (profileData != null) {
           _userProfile = UserProfile.fromSupabase(profileData);
+        }
+
+        // Load user stats
+        try {
+          _userStats = await GamificationService().getUserStats();
+        } catch (e) {
+          print('Error loading user stats: $e');
+          _userStats = {'points': 0, 'level': 1, 'unlocked_achievements': 0};
+        }
+
+        // Load user achievements
+        try {
+          final achievements = await GamificationService().getUserAchievements();
+          _userAchievements = achievements.map((achievement) => {
+            'name': achievement.achievementId,
+            'description': 'Complete tasks to unlock',
+            'unlocked': achievement.unlocked,
+            'unlocked_at': achievement.unlockedAt,
+          }).toList();
+        } catch (e) {
+          print('Error loading achievements: $e');
+          _userAchievements = [];
         }
       }
       
@@ -50,6 +79,102 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
       setState(() {
         _error = 'Failed to load profile: $e';
         _isLoading = false;
+      });
+    }
+  }
+
+  void _showEditProfileDialog() {
+    if (_userProfile != null) {
+      _nameController.text = _userProfile!.handle ?? '';
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Display Name',
+                hintText: 'Enter your display name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Note: Email cannot be changed here. Contact support for email changes.',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: _saveProfile,
+            child: Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveProfile() async {
+    setState(() {
+      _isEditing = true;
+    });
+
+    try {
+      final userId = SupabaseService.currentUserId;
+      if (userId != null && _userProfile != null) {
+        // Get current user email from auth
+        final currentUser = SupabaseService.client.auth.currentUser;
+        final userEmail = currentUser?.email ?? '';
+        
+        // Create updated profile data
+        final updatedProfile = {
+          'id': userId,
+          'handle': _nameController.text.isNotEmpty ? _nameController.text : null,
+          'email': userEmail,
+          'learner_code': _userProfile!.learnerCode,
+          'locale': _userProfile!.locale,
+          'study_goal_date': _userProfile!.studyGoalDate?.toIso8601String(),
+          'daily_points': _userProfile!.dailyPoints,
+          'gaming_points': _userProfile!.gamingPoints,
+          'total_points': _userProfile!.totalPoints,
+          'level': _userProfile!.level,
+          'login_streak': _userProfile!.loginStreak,
+          'last_login_date': _userProfile!.lastLoginDate?.toIso8601String(),
+          'last_daily_points_date': _userProfile!.lastDailyPointsDate?.toIso8601String(),
+          'created_at': _userProfile!.createdAt.toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+        
+        await DatabaseService.updateUserProfile(updatedProfile);
+        
+        // Reload profile data
+        await _loadUserProfile();
+        
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Profile updated successfully!')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update profile: $e')),
+      );
+    } finally {
+      setState(() {
+        _isEditing = false;
       });
     }
   }
@@ -206,7 +331,7 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
                   child: ListView(
                     padding: EdgeInsets.all(16),
                     children: [
-                      // User Header
+                      // User Header with Edit Button
                       Card(
                         elevation: 4,
                         child: Padding(
@@ -231,17 +356,33 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      _userProfile?.handle ?? 'User',
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          _userProfile?.handle ?? 'User',
+                                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: _showEditProfileDialog,
+                                          icon: Icon(Icons.edit, size: 20),
+                                          tooltip: 'Edit Profile',
+                                        ),
+                                      ],
                                     ),
                                     SizedBox(height: 4),
                                     Text(
-                                      'Learner Code: ${_userProfile?.learnerCode ?? 0}',
+                                      _getUserEmail(),
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    Text(
+                                      'Learner Code: ${_userProfile?.learnerCode ?? 0}',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Colors.grey[500],
                                       ),
                                     ),
                                   ],
@@ -360,47 +501,134 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
 
                       SizedBox(height: 16),
 
-                      // Points Overview
-                      Text(
-                        'Points Overview',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      // Progress Overview with Points
+                      Card(
+                        elevation: 4,
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Progress Overview',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[100],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.star, size: 16, color: Colors.blue[800]),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Level ${_userProfile?.level ?? 1}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue[800],
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 16),
+                              
+                              // Points Summary
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildProgressStat('Total Points', _userProfile?.totalPoints ?? 0, Icons.star, Colors.orange),
+                                  _buildProgressStat('Daily Points', _userProfile?.dailyPoints ?? 0, Icons.calendar_today, Colors.green),
+                                  _buildProgressStat('Gaming Points', _userProfile?.gamingPoints ?? 0, Icons.videogame_asset, Colors.blue),
+                                ],
+                              ),
+                              SizedBox(height: 16),
+                              
+                              // Level Progress
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Level Progress',
+                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${_userProfile?.totalPoints ?? 0} / ${_calculateNextLevelPoints(_userProfile?.level ?? 1)}',
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8),
+                                  LinearProgressIndicator(
+                                    value: _calculateLevelProgress(_userProfile?.totalPoints ?? 0, _userProfile?.level ?? 1),
+                                    backgroundColor: Colors.grey[300],
+                                    color: Colors.blue,
+                                    minHeight: 8,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    '${_calculatePointsToNextLevel(_userProfile?.totalPoints ?? 0, _userProfile?.level ?? 1)} points to next level',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      SizedBox(height: 12),
 
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        children: [
-                          _buildPointCard(
-                            'Daily Points',
-                            _userProfile?.dailyPoints ?? 0,
-                            Colors.green,
-                            Icons.calendar_today,
+                      SizedBox(height: 16),
+
+                      // Achievements Preview
+                      Card(
+                        elevation: 4,
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Recent Achievements',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => context.go('/achievements'),
+                                    child: Text('View All'),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              
+                              // Achievement preview cards
+                              _buildAchievementPreview(),
+                            ],
                           ),
-                          _buildPointCard(
-                            'Gaming Points',
-                            _userProfile?.gamingPoints ?? 0,
-                            Colors.blue,
-                            Icons.videogame_asset,
-                          ),
-                          _buildPointCard(
-                            'Total Points',
-                            _userProfile?.totalPoints ?? 0,
-                            Colors.orange,
-                            Icons.star,
-                          ),
-                          _buildPointCard(
-                            'Level',
-                            _userProfile?.level ?? 1,
-                            Colors.purple,
-                            Icons.leaderboard,
-                          ),
-                        ],
+                        ),
                       ),
 
                       SizedBox(height: 24),
@@ -531,5 +759,180 @@ class _UserProfileDashboardState extends ConsumerState<UserProfileDashboard> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  // New methods for progress overview
+  Widget _buildProgressStat(String title, int value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: color.withOpacity(0.3)),
+          ),
+          child: Icon(icon, size: 24, color: color),
+        ),
+        SizedBox(height: 4),
+        Text(
+          '$value',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  int _calculateNextLevelPoints(int currentLevel) {
+    return currentLevel * (currentLevel + 1) * 50;
+  }
+
+  double _calculateLevelProgress(int totalPoints, int currentLevel) {
+    final currentLevelPoints = _calculateNextLevelPoints(currentLevel - 1);
+    final nextLevelPoints = _calculateNextLevelPoints(currentLevel);
+    final pointsInCurrentLevel = totalPoints - currentLevelPoints;
+    final pointsNeededForNextLevel = nextLevelPoints - currentLevelPoints;
+    
+    return pointsInCurrentLevel / pointsNeededForNextLevel;
+  }
+
+  int _calculatePointsToNextLevel(int totalPoints, int currentLevel) {
+    final nextLevelPoints = _calculateNextLevelPoints(currentLevel);
+    return nextLevelPoints - totalPoints;
+  }
+
+  Widget _buildAchievementPreview() {
+    // For now, show a placeholder for achievements
+    // In a real implementation, this would fetch actual achievements
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.emoji_events, color: Colors.orange, size: 24),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'First Steps',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[800],
+                      ),
+                    ),
+                    Text(
+                      'Complete your first study session',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.orange[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '+10 pts',
+                  style: TextStyle(
+                    color: Colors.orange[800],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 8),
+        Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.green[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.local_fire_department, color: Colors.green, size: 24),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Daily Learner',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[800],
+                      ),
+                    ),
+                    Text(
+                      'Study for 3 consecutive days',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.green[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '+20 pts',
+                  style: TextStyle(
+                    color: Colors.green[800],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          'And ${_userProfile?.totalPoints != null ? (_userProfile!.totalPoints ~/ 10) : 0} more achievements...',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getUserEmail() {
+    try {
+      final currentUser = SupabaseService.client.auth.currentUser;
+      return currentUser?.email ?? 'user@example.com';
+    } catch (e) {
+      return 'user@example.com';
+    }
   }
 }

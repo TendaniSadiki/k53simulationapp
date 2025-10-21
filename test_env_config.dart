@@ -63,3 +63,21 @@ class EnvironmentConfig {
     print('==================================');
   }
 }
+
+void main() async {
+  print('Testing .env configuration...');
+  
+  try {
+    await EnvironmentConfig.initialize();
+    EnvironmentConfig.validate();
+    EnvironmentConfig.printConfig();
+    
+    print('\n✅ .env configuration is working correctly!');
+    print('✅ All required environment variables are present');
+    print('✅ Configuration loaded successfully from .env file');
+    
+  } catch (e) {
+    print('\n❌ Error: $e');
+    print('❌ .env configuration failed');
+  }
+}

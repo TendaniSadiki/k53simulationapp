@@ -25,29 +25,39 @@ class GamificationService {
       // Get all achievements of this type
       final achievementsData = await DatabaseService.getAchievementsByType(type.name);
       
+      // Handle case where no achievements are found
+      if (achievementsData.isEmpty) {
+        print('No achievements found for type: ${type.name}');
+        return;
+      }
+      
       for (final achievementData in achievementsData) {
-        final achievement = Achievement.fromSupabase(achievementData);
-        
-        // Check if user already has this achievement
-        final userAchievementData = await DatabaseService.getUserAchievement(currentUserId, achievement.id);
-        final userAchievement = userAchievementData != null ? UserAchievement.fromSupabase(userAchievementData) : null;
-
-        if (userAchievement != null && userAchievement.unlocked) {
-          continue; // Already unlocked
-        }
-
-        // Calculate new progress
-        final newProgress = (userAchievement?.progress ?? 0) + value;
-        
-        if (newProgress >= achievement.targetValue) {
-          // Unlock achievement
-          await DatabaseService.unlockAchievement(currentUserId, achievement.id);
+        try {
+          final achievement = Achievement.fromSupabase(achievementData);
           
-          // Track achievement unlock in analytics
-          await DatabaseService.trackAchievementUnlocked(currentUserId, achievement.id);
-        } else {
-          // Update progress
-          await DatabaseService.updateAchievementProgress(currentUserId, achievement.id, newProgress);
+          // Check if user already has this achievement
+          final userAchievementData = await DatabaseService.getUserAchievement(currentUserId, achievement.id);
+          final userAchievement = userAchievementData != null ? UserAchievement.fromSupabase(userAchievementData) : null;
+
+          if (userAchievement != null && userAchievement.unlocked) {
+            continue; // Already unlocked
+          }
+
+          // Calculate new progress
+          final newProgress = (userAchievement?.progress ?? 0) + value;
+          
+          if (newProgress >= achievement.targetValue) {
+            // Unlock achievement
+            await DatabaseService.unlockAchievement(currentUserId, achievement.id);
+            
+            // Track achievement unlock in analytics
+            await DatabaseService.trackAchievementUnlocked(currentUserId, achievement.id);
+          } else {
+            // Update progress
+            await DatabaseService.updateAchievementProgress(currentUserId, achievement.id, newProgress);
+          }
+        } catch (e) {
+          print('Error processing achievement: $e');
         }
       }
     } catch (e) {
@@ -385,16 +395,20 @@ class GamificationService {
       }
 
       final userAchievements = await getUserAchievements();
-      final unlockedAchievements = userAchievements.where((ua) => ua.unlocked);
+      final unlockedAchievements = userAchievements.where((ua) => ua.unlocked).toList();
       
       // Calculate total points from actual achievement point values
       int totalPoints = 0;
       for (final userAchievement in unlockedAchievements) {
-        // Fetch the achievement details to get the point value
-        final achievementData = await DatabaseService.getAchievementById(userAchievement.achievementId);
-        if (achievementData != null) {
-          final achievement = Achievement.fromSupabase(achievementData);
-          totalPoints += achievement.points;
+        try {
+          // Fetch the achievement details to get the point value
+          final achievementData = await DatabaseService.getAchievementById(userAchievement.achievementId);
+          if (achievementData != null) {
+            final achievement = Achievement.fromSupabase(achievementData);
+            totalPoints += achievement.points;
+          }
+        } catch (e) {
+          print('Error calculating points for achievement ${userAchievement.achievementId}: $e');
         }
       }
       
