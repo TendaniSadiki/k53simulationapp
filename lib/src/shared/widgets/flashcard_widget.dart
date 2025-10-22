@@ -30,32 +30,17 @@ class FlashcardWidget extends StatefulWidget {
   _FlashcardWidgetState createState() => _FlashcardWidgetState();
 }
 
-class _FlashcardWidgetState extends State<FlashcardWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _flipController;
+class _FlashcardWidgetState extends State<FlashcardWidget> {
   bool _isFlipped = false;
-  DateTime? _lastTapTime;
-  Offset? _lastTapPosition;
-  bool _isAnimating = false;
 
   @override
   void initState() {
     super.initState();
-    _flipController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
     
     // Start flipped if requested
     if (widget.startFlipped) {
       _isFlipped = true;
-      _flipController.value = 1.0;
     }
-
-    _flipController.addStatusListener((status) {
-      _isAnimating = status == AnimationStatus.forward || 
-                     status == AnimationStatus.reverse;
-    });
   }
 
   @override
@@ -64,91 +49,57 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     
     // Handle external flip state changes
     if (widget.startFlipped != oldWidget.startFlipped) {
-      if (widget.startFlipped && !_isFlipped) {
-        _flipController.forward();
-        _isFlipped = true;
-      } else if (!widget.startFlipped && _isFlipped) {
-        _flipController.reverse();
-        _isFlipped = false;
-      }
+      setState(() {
+        _isFlipped = widget.startFlipped;
+      });
     }
   }
 
   void _handleDoubleTap() {
-    if (!widget.enableDoubleTap || _isAnimating) return;
+    if (!widget.enableDoubleTap) return;
 
-    // Provide haptic feedback
+    // Only allow flipping in study mode
+    if (widget.mode != FlashcardMode.study) return;
+
+    // Provide haptic feedback only in study mode
     HapticFeedback.lightImpact();
 
-    // Flip animation
-    if (_isFlipped) {
-      _flipController.reverse();
-    } else {
-      _flipController.forward();
-    }
-    _isFlipped = !_isFlipped;
+    setState(() {
+      _isFlipped = !_isFlipped;
+    });
 
     // Notify parent about flip
     widget.onFlip?.call();
   }
 
   void _handleTapDown(TapDownDetails details) {
-    final now = DateTime.now();
-    final currentPosition = details.globalPosition;
-
-    // Check if this is a double tap
-    if (_lastTapTime != null && 
-        now.difference(_lastTapTime!) < const Duration(milliseconds: 500) &&
-        _lastTapPosition != null &&
-        _getDistance(_lastTapPosition!, currentPosition) < 20) {
-      
+    // Only handle taps in study mode
+    if (widget.mode == FlashcardMode.study) {
       _handleDoubleTap();
-      _lastTapTime = null;
-      _lastTapPosition = null;
-    } else {
-      _lastTapTime = now;
-      _lastTapPosition = currentPosition;
     }
-  }
-
-  double _getDistance(Offset a, Offset b) {
-    final dx = a.dx - b.dx;
-    final dy = a.dy - b.dy;
-    return (dx * dx + dy * dy);
   }
 
   @override
   void dispose() {
-    _flipController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // For exam mode, disable all gestures and show only front content
+    if (widget.mode == FlashcardMode.exam) {
+      return _buildStaticContent(showFront: true);
+    }
+    
+    // For study mode, allow gestures but show content based on flip state
     return GestureDetector(
-      onTapDown: _handleTapDown,
+      onTapDown: widget.mode == FlashcardMode.study ? _handleTapDown : null,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: _flipController,
-        builder: (context, child) {
-          final angle = _flipController.value * 3.14159; // π radians for 180° flip
-          
-          return Transform(
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001) // Perspective
-              ..rotateY(angle),
-            alignment: Alignment.center,
-            child: _buildContent(),
-          );
-        },
-      ),
+      child: _buildStaticContent(showFront: !_isFlipped),
     );
   }
 
-  Widget _buildContent() {
-    // Determine which content to show based on flip state
-    final showFront = _flipController.value < 0.5;
-    
+  Widget _buildStaticContent({required bool showFront}) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -162,12 +113,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 150),
-          child: showFront 
-              ? _buildFrontContent()
-              : _buildBackContent(),
-        ),
+        child: showFront ? _buildFrontContent() : _buildBackContent(),
       ),
     );
   }
@@ -302,7 +248,13 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
 
   // Public method to programmatically flip the card
   void flip() {
-    _handleDoubleTap();
+    // Only allow flipping in study mode
+    if (widget.mode == FlashcardMode.study) {
+      setState(() {
+        _isFlipped = !_isFlipped;
+      });
+      widget.onFlip?.call();
+    }
   }
 
   // Public method to check current flip state
