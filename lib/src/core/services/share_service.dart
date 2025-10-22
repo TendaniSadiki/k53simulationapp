@@ -1,156 +1,145 @@
-                                                                                                                                                                                                                                  import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../models/referral.dart';
-import './database_service.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import './supabase_service.dart';
-import './gamification_service.dart';
-import '../models/achievement.dart';
 
 class ShareService {
-  static final ShareService _instance = ShareService._internal();
-  factory ShareService() => _instance;
-  ShareService._internal();
-
-  // Share content via WhatsApp or other platforms
-  Future<void> shareContent(ShareContent content) async {
-    try {
-      final text = '${content.title}\n\n${content.message}${content.deepLink != null ? '\n\n${content.deepLink}' : ''}';
-      
-      await Share.share(
-        text,
-        subject: content.title,
-      );
-
-      // Track share event
-      await _trackShareEvent(content);
-    } catch (e) {
-      print('Error sharing content: $e');
-    }
-  }
-
-  // Share content specifically via WhatsApp with deep linking
-  Future<void> shareViaWhatsApp(ShareContent content) async {
-    try {
-      final text = '${content.title}\n\n${content.message}${content.deepLink != null ? '\n\n${content.deepLink}' : ''}';
-      
-      // Encode the text for URL
-      final encodedText = Uri.encodeComponent(text);
-      final whatsappUrl = 'whatsapp://send?text=$encodedText';
-      
-      // Try to launch WhatsApp
-      if (await canLaunch(whatsappUrl)) {
-        await launch(whatsappUrl);
-        
-        // Track share event
-        await _trackShareEvent(content, platform: 'whatsapp');
-      } else {
-        // Fallback to generic share if WhatsApp is not installed
-        await shareContent(content);
-      }
-    } catch (e) {
-      print('Error sharing via WhatsApp: $e');
-      // Fallback to generic share
-      await shareContent(content);
-    }
-  }
-
-  // Share referral link via WhatsApp
+  static const String _referralLink = 'https://k53app.com/referral';
+  
   Future<void> shareReferralLink() async {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return;
+    final user = SupabaseService.auth.currentUser;
+    final referralCode = user?.id.substring(0, 8) ?? 'default';
+    final shareText = '''
+🚗 Get ready for your K53 Learner's License test!
 
-    try {
-      // Generate referral link with UTM parameters
-      final referralLink = _generateReferralLink(userId);
-      
-      final content = ShareContent(
-        title: 'Join me on K53 Learner\'s License App!',
-        message: 'I\'m using this amazing app to study for my K53 learner\'s license. '
-                 'It has practice questions, mock exams, and great explanations. '
-                 'Join me and let\'s study together!',
-        deepLink: referralLink,
-      );
+Download the K53 Learner's License App and use my referral code: $referralCode
 
-      await shareContent(content);
+✅ Study all K53 road signs and rules
+✅ Take unlimited mock exams
+✅ Track your progress
+✅ Learn at your own pace
 
-      // Track referral share
-      await DatabaseService.trackReferralShare(userId);
-    } catch (e) {
-      print('Error sharing referral link: $e');
-    }
+Download now: $_referralLink
+
+#K53 #LearnersLicense #DrivingTest #RoadSafety
+''';
+
+    await Share.share(shareText);
   }
 
-  // Generate referral link with UTM tracking
-  String _generateReferralLink(String userId) {
-    final baseUrl = 'https://k53app.com/download'; // Replace with actual app store link
-    return '$baseUrl?ref=$userId&utm_source=whatsapp&utm_medium=referral&utm_campaign=user_$userId';
-  }
-
-  // Track share event for analytics
-  Future<void> _trackShareEvent(ShareContent content, {String platform = 'whatsapp'}) async {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return;
-
-    try {
-      await DatabaseService.trackShareEvent(
-        userId: userId,
-        platform: platform,
-        contentType: content.title,
-        success: true,
-      );
-    } catch (e) {
-      print('Error tracking share event: $e');
-    }
-  }
-
-  // Handle referral signup (when someone signs up using referral link)
-  Future<void> handleReferralSignup(String referrerId, String referredEmail) async {
-    try {
-      // Create referral record using direct database operations
-      final referral = await DatabaseService.createReferral(
-        referrerId: referrerId,
-        referredEmail: referredEmail,
-      );
-
-      if (referral != null) {
-        // Award points to referrer
-        await GamificationService().trackProgress(
-          type: AchievementType.social,
-          value: 1,
-          userId: referrerId,
-        );
-
-        // Track referral completion
-        await DatabaseService.trackReferralCompletion(referral.id);
-      }
-    } catch (e) {
-      print('Error handling referral signup: $e');
-    }
-  }
-
-  // Get user's referral stats
   Future<Map<String, dynamic>> getReferralStats() async {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return {};
+    final user = SupabaseService.auth.currentUser;
+    if (user == null) {
+      return {
+        'totalReferrals': 0,
+        'completedReferrals': 0,
+        'totalPoints': 0,
+      };
+    }
 
     try {
-      return await DatabaseService.getReferralStats(userId);
+      // Query referrals table for this user
+      final response = await SupabaseService.client
+          .from('referrals')
+          .select('*')
+          .eq('referrer_id', user.id);
+
+      final referrals = response as List<dynamic>;
+      final totalReferrals = referrals.length;
+      final completedReferrals = referrals.where((r) => r['is_completed'] == true).length;
+      final totalPoints = referrals.fold<int>(0, (sum, r) => sum + ((r['points_awarded'] as int?) ?? 0));
+
+      return {
+        'totalReferrals': totalReferrals,
+        'completedReferrals': completedReferrals,
+        'totalPoints': totalPoints,
+      };
     } catch (e) {
-      print('Error getting referral stats: $e');
-      return {};
+      // If referrals table doesn't exist or there's an error, return default values
+      return {
+        'totalReferrals': 0,
+        'completedReferrals': 0,
+        'totalPoints': 0,
+      };
     }
   }
 
-  // Get user's referral history
-  Future<List<Referral>> getReferralHistory() async {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return [];
+  Future<void> trackReferral(String referralCode) async {
+    final user = SupabaseService.auth.currentUser;
+    if (user == null) return;
 
     try {
-      return await DatabaseService.getUserReferrals(userId);
+      // Record the referral in the database
+      await SupabaseService.client
+          .from('referrals')
+          .insert({
+            'referrer_id': referralCode, // The person who shared the code
+            'referred_id': user.id,      // The person who used the code
+            'created_at': DateTime.now().toIso8601String(),
+            'is_completed': true,
+            'points_awarded': 100, // Award 100 points for successful referral
+          });
     } catch (e) {
-      print('Error getting referral history: $e');
-      return [];
+      // Handle error silently - referral tracking is optional
+      print('Error tracking referral: $e');
     }
+  }
+
+  Future<void> shareAchievement(String achievementName, int points) async {
+    final shareText = '''
+🎉 I just earned the "$achievementName" achievement in the K53 Learner's License App!
+
+🏆 +$points points
+🚗 Mastering K53 road signs and rules
+
+Download the app and start your journey to getting your learner's license:
+$_referralLink
+
+#K53 #Achievement #DrivingTest #RoadSafety
+''';
+
+    await Share.share(shareText);
+  }
+
+  Future<void> shareExamResult(int score, int totalQuestions, bool passed) async {
+    final resultText = passed ? 'PASSED' : 'NEEDS MORE PRACTICE';
+    final emoji = passed ? '🎉' : '📚';
+    
+    final shareText = '''
+$emoji K53 Mock Exam Result: $resultText
+
+📊 Score: $score/$totalQuestions
+🚗 Category: All Categories
+📱 App: K53 Learner's License
+
+${passed ? 'Ready for the real test!' : 'Time to study more!'}
+
+Download the app and test your knowledge:
+$_referralLink
+
+#K53 #MockExam #DrivingTest #${passed ? 'Passed' : 'StudyMore'}
+''';
+
+    await Share.share(shareText);
+  }
+
+  Future<void> shareProgress(int totalQuestions, int correctAnswers, String category) async {
+    final percentage = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 100).round() : 0;
+    
+    final shareText = '''
+📈 My K53 Learning Progress
+
+✅ Category: $category
+🎯 Accuracy: $percentage% ($correctAnswers/$totalQuestions)
+📱 App: K53 Learner's License
+
+Making progress towards my learner's license! 🚗
+
+Download the app and track your progress:
+$_referralLink
+
+#K53 #LearningProgress #DrivingTest #RoadSafety
+''';
+
+    await Share.share(shareText);
   }
 }

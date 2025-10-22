@@ -1,71 +1,51 @@
-import 'package:k53app/src/core/services/database_service.dart';
-import 'package:k53app/src/core/services/supabase_service.dart';
-import '../config/environment_config.dart';
+import 'package:flutter/foundation.dart';
 
 class AnalyticsService {
-  // Track study session start
-  static Future<void> trackStudySessionStart({
-    required String sessionId,
-    required String category,
-    required int questionCount,
+  static final AnalyticsService _instance = AnalyticsService._internal();
+  factory AnalyticsService() => _instance;
+  AnalyticsService._internal();
+
+  // Track user engagement events
+  static Future<void> trackUserEngagement({
+    required String eventName,
+    Map<String, dynamic>? properties,
   }) async {
-    // This would integrate with your analytics service
-    // For now, we'll just print for debugging
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: Study session started - '
-          'Session: $sessionId, '
-          'Category: $category, '
-          'Questions: $questionCount');
+    if (kDebugMode) {
+      print('📊 Analytics Event: $eventName');
+      if (properties != null) {
+        print('📊 Properties: $properties');
+      }
     }
+    
+    // In production, this would send to your analytics service
+    // For now, we just log to console in debug mode
   }
 
-  // Track question answered
-  static Future<void> trackQuestionAnswered({
-    required String sessionId,
-    required String questionId,
-    required bool isCorrect,
-    required int elapsedMs,
-    required int hintsUsed,
+  // Alias for trackUserEngagement - for compatibility with existing code
+  static Future<void> trackEvent({
+    required String eventName,
+    Map<String, dynamic>? properties,
   }) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: Question answered - '
-          'Session: $sessionId, '
-          'Correct: $isCorrect, '
-          'Time: ${elapsedMs}ms, '
-          'Hints: $hintsUsed');
-    }
-  }
-
-  // Track study session completion
-  static Future<void> trackStudySessionComplete({
-    required String sessionId,
-    required int totalQuestions,
-    required int correctAnswers,
-    required int totalTimeSeconds,
-  }) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      final accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-      
-      print('Analytics: Study session completed - '
-          'Session: $sessionId, '
-          'Score: $correctAnswers/$totalQuestions, '
-          'Accuracy: ${accuracy.toStringAsFixed(1)}%, '
-          'Time: ${totalTimeSeconds}s');
-    }
+    await trackUserEngagement(
+      eventName: eventName,
+      properties: properties,
+    );
   }
 
   // Track exam session start
   static Future<void> trackExamSessionStart({
     required String sessionId,
-    required String category,
-    required int timeLimitMinutes,
+    String? category,
+    int timeLimitMinutes = 45,
   }) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: Exam session started - '
-          'Session: $sessionId, '
-          'Category: $category, '
-          'Time Limit: ${timeLimitMinutes}min');
-    }
+    await trackUserEngagement(
+      eventName: 'exam_session_start',
+      properties: {
+        'session_id': sessionId,
+        'category': category ?? 'all',
+        'time_limit_minutes': timeLimitMinutes,
+      },
+    );
   }
 
   // Track exam session completion
@@ -76,134 +56,199 @@ class AnalyticsService {
     required bool passed,
     required int timeSpentSeconds,
   }) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: Exam session completed - '
-          'Session: $sessionId, '
-          'Score: $score/$totalQuestions, '
-          'Passed: $passed, '
-          'Time: ${timeSpentSeconds}s');
-    }
+    await trackUserEngagement(
+      eventName: 'exam_session_complete',
+      properties: {
+        'session_id': sessionId,
+        'score': score,
+        'total_questions': totalQuestions,
+        'passed': passed,
+        'time_spent_seconds': timeSpentSeconds,
+        'accuracy': totalQuestions > 0 ? (score / totalQuestions) : 0,
+      },
+    );
   }
 
-  // Track user engagement
-  static Future<void> trackUserEngagement({
-    required String eventName,
-    Map<String, dynamic>? properties,
+  // Track study session start
+  static Future<void> trackStudySessionStart({
+    required String sessionId,
+    String? category,
+    int? learnerCode,
   }) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      final props = properties?.entries
-          .map((e) => '${e.key}: ${e.value}')
-          .join(', ') ?? 'none';
-      
-      print('Analytics: User engagement - '
-          'Event: $eventName, '
-          'Properties: $props');
-    }
+    await trackUserEngagement(
+      eventName: 'study_session_start',
+      properties: {
+        'session_id': sessionId,
+        'category': category ?? 'all',
+        'learner_code': learnerCode,
+      },
+    );
   }
 
-  // Get user study statistics
-  static Future<Map<String, dynamic>> getUserStudyStats() async {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return {};
-
-    try {
-      return await DatabaseService.getUserStats(userId);
-    } catch (e) {
-      print('Error getting user stats: $e');
-      return {};
-    }
-  }
-
-  // Get category-wise performance
-  static Future<Map<String, dynamic>> getCategoryPerformance() async {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return {};
-
-    try {
-      // This would be implemented with more specific database queries
-      // For now, return empty map as placeholder
-      return {};
-    } catch (e) {
-      print('Error getting category performance: $e');
-      return {};
-    }
-  }
-
-  // Get daily streak information
-  static Future<Map<String, dynamic>> getDailyStreak() async {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return {};
-
-    try {
-      // Query for consecutive days with study activity
-      // This would require additional database structure
-      return {
-        'currentStreak': 0,
-        'longestStreak': 0,
-        'lastActivity': null,
-      };
-    } catch (e) {
-      print('Error getting daily streak: $e');
-      return {};
-    }
-  }
-
-  // Track app usage time
-  static Future<void> trackAppUsageTime(Duration duration) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: App usage time - '
-          'Duration: ${duration.inMinutes} minutes');
-    }
-  }
-
-  // Track feature usage
-  static Future<void> trackFeatureUsage(String featureName) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: Feature used - $featureName');
-    }
-  }
-
-  // Track error events
-  static Future<void> trackError({
-    required String errorType,
-    required String errorMessage,
-    String? context,
+  // Track study session completion
+  static Future<void> trackStudySessionComplete({
+    required String sessionId,
+    required int correctAnswers,
+    required int totalAnswered,
+    String? category,
   }) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: Error occurred - '
-          'Type: $errorType, '
-          'Message: $errorMessage, '
-          'Context: $context');
-    }
+    await trackUserEngagement(
+      eventName: 'study_session_complete',
+      properties: {
+        'session_id': sessionId,
+        'correct_answers': correctAnswers,
+        'total_answered': totalAnswered,
+        'category': category ?? 'all',
+        'accuracy': totalAnswered > 0 ? (correctAnswers / totalAnswered) : 0,
+      },
+    );
   }
 
-  // Track user achievement
-  static Future<void> trackAchievement({
-    required String achievementName,
-    required String achievementType,
+  // Track question answered
+  static Future<void> trackQuestionAnswered({
+    required String sessionId,
+    required String questionId,
+    required bool isCorrect,
+    required int elapsedMs,
+    required int hintsUsed,
   }) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: Achievement unlocked - '
-          'Name: $achievementName, '
-          'Type: $achievementType');
-    }
+    await trackUserEngagement(
+      eventName: 'question_answered',
+      properties: {
+        'session_id': sessionId,
+        'question_id': questionId,
+        'is_correct': isCorrect,
+        'elapsed_ms': elapsedMs,
+        'hints_used': hintsUsed,
+      },
+    );
   }
 
-  // Track image requirements for questions
+  // Track image requirement for questions
   static Future<void> trackImageRequirement({
     required String questionId,
     required String questionText,
-    required String? imageUrl,
+    String? imageUrl,
     required String category,
     required int learnerCode,
   }) async {
-    if (EnvironmentConfig.enableAnalytics) {
-      print('Analytics: Image requirement - '
-          'Question ID: $questionId, '
-          'Question: "${questionText.replaceAll('"', "'")}", '
-          'Image URL: $imageUrl, '
-          'Category: $category, '
-          'Learner Code: $learnerCode');
-    }
+    await trackUserEngagement(
+      eventName: 'image_requirement',
+      properties: {
+        'question_id': questionId,
+        'question_text_length': questionText.length,
+        'has_image': imageUrl != null,
+        'category': category,
+        'learner_code': learnerCode,
+      },
+    );
+  }
+
+  // Track user registration
+  static Future<void> trackUserRegistration({
+    required String userId,
+    String? email,
+  }) async {
+    await trackUserEngagement(
+      eventName: 'user_registration',
+      properties: {
+        'user_id': userId,
+        'has_email': email != null,
+      },
+    );
+  }
+
+  // Track user login
+  static Future<void> trackUserLogin({
+    required String userId,
+  }) async {
+    await trackUserEngagement(
+      eventName: 'user_login',
+      properties: {
+        'user_id': userId,
+      },
+    );
+  }
+
+  // Track app errors
+  static Future<void> trackError({
+    required String error,
+    required String stackTrace,
+    String? context,
+  }) async {
+    await trackUserEngagement(
+      eventName: 'app_error',
+      properties: {
+        'error': error,
+        'stack_trace': stackTrace,
+        'context': context,
+      },
+    );
+  }
+
+  // Track feature usage
+  static Future<void> trackFeatureUsage({
+    required String featureName,
+    Map<String, dynamic>? additionalProperties,
+  }) async {
+    await trackUserEngagement(
+      eventName: 'feature_usage',
+      properties: {
+        'feature_name': featureName,
+        ...?additionalProperties,
+      },
+    );
+  }
+
+  // Track gamification events
+  static Future<void> trackGamificationEvent({
+    required String eventType,
+    required int points,
+    String? achievementId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await trackUserEngagement(
+      eventName: 'gamification_event',
+      properties: {
+        'event_type': eventType,
+        'points': points,
+        'achievement_id': achievementId,
+        ...?metadata,
+      },
+    );
+  }
+
+  // Track offline mode usage
+  static Future<void> trackOfflineModeUsage({
+    required bool isOffline,
+    required String activity,
+    Map<String, dynamic>? additionalData,
+  }) async {
+    await trackUserEngagement(
+      eventName: 'offline_mode_usage',
+      properties: {
+        'is_offline': isOffline,
+        'activity': activity,
+        ...?additionalData,
+      },
+    );
+  }
+
+  // Track session recovery
+  static Future<void> trackSessionRecovery({
+    required String sessionId,
+    required String sessionType,
+    required bool success,
+    String? error,
+  }) async {
+    await trackUserEngagement(
+      eventName: 'session_recovery',
+      properties: {
+        'session_id': sessionId,
+        'session_type': sessionType,
+        'success': success,
+        'error': error,
+      },
+    );
   }
 }

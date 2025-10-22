@@ -1,0 +1,50 @@
+{
+  "bucket": "road_signs",
+  "description": "K53 Road Sign Assets - Comprehensive collection of South African road signs",
+  "category": "regulatory",
+  "folders": [
+    "CHANGES IN VEHICLE MOVEMENT AHEAD",
+    "CODE 1",
+    "CODE 2",
+    "CODE 3",
+    "COLOUR COMBINATIONS",
+    "COMMAND SIGNS",
+    "COMPREHENSIVE SIGNS",
+    "CONTROL SIGNS",
+    "DE-RESTRICTION SIGNS",
+    "DIRECTION SIGN SYMBOLS",
+    "HAZARD MARKER PLATES",
+    "INFORMATION SIGNS",
+    "LIMIT PROHIBITION SIGNS",
+    "LOCAL DIRECTION SIGN SYMBOLS",
+    "LOCATION NAME SYMBOLS",
+    "MOVING HAZARDS AHEAD",
+    "PROHIBITION SIGNS",
+    "RESERVATION SIGNS",
+    "ROAD LAYOUT CHANGES AHEAD",
+    "ROAD SITUATIONS AHEAD",
+    "SELECTIVE RESTRICTION SIGNS",
+    "SUPPLEMENTARY INFORMATION PLATES",
+    "TOURISM SIGN SYMBOL",
+    "TRAFFIC SIGNALS"
+  ],
+  "metadata": {
+    "total_folders": 24,
+    "asset_types": [
+      "regulatory_signs",
+      "warning_signs",
+      "information_signs",
+      "command_signs",
+      "prohibition_signs"
+    ],
+    "file_formats": [
+      "png",
+      "jpg",
+      "jpeg"
+    ],
+    "organization": "hierarchical",
+    "version": "1.0",
+    "created": "2025-09-30",
+    "source": "assets/individual_signs/"
+  }
+}

@@ -20,7 +20,7 @@ class Referral {
   factory Referral.fromJson(Map<String, dynamic> json) {
     return Referral(
       id: json['id'],
-      referrerId: json['referrer_id'],
+      referrerId: json['referrer_user_id'],
       referredEmail: json['referred_email'],
       status: ReferralStatus.values.firstWhere(
         (e) => e.toString().split('.').last == json['status'],
@@ -37,7 +37,7 @@ class Referral {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'referrer_id': referrerId,
+      'referrer_user_id': referrerId,
       'referred_email': referredEmail,
       'status': status.toString().split('.').last,
       'created_at': createdAt.toIso8601String(),

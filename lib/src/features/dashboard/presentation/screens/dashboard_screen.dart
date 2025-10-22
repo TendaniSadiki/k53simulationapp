@@ -5,23 +5,52 @@ import '../../../../core/services/supabase_service.dart';
 import '../../../referral/presentation/widgets/referral_widget.dart';
 import '../../../../shared/widgets/connectivity_indicator.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  DateTime? _currentBackPressTime;
+
+  Future<bool> _onWillPop() async {
+    final now = DateTime.now();
+    if (_currentBackPressTime == null ||
+        now.difference(_currentBackPressTime!) > const Duration(seconds: 2)) {
+      _currentBackPressTime = now;
+      
+      // Show toast message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Press back again to exit'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(20),
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentUser = SupabaseService.auth.currentUser;
 
-    return Scaffold(
-      appBar: AppBar(
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
           const ConnectivityIndicator(),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await SupabaseService.signOut();
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              context.go('/profile');
             },
           ),
         ],
@@ -80,9 +109,9 @@ class DashboardScreen extends ConsumerWidget {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.9,
               ),
               children: [
                 _buildActionCard(
@@ -133,9 +162,18 @@ class DashboardScreen extends ConsumerWidget {
                   onTap: () => context.go('/achievements'),
                   color: Colors.pink,
                 ),
+                _buildActionCard(
+                  context,
+                  icon: Icons.person,
+                  title: 'Profile',
+                  subtitle: 'Your account & stats',
+                  onTap: () => context.go('/profile'),
+                  color: Colors.blueGrey,
+                ),
               ],
             ),
           ],
+        ),
         ),
       ),
     );
@@ -160,12 +198,13 @@ class DashboardScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 28, color: color),
-              const SizedBox(height: 6),
+              Icon(icon, size: 24, color: color),
+              const SizedBox(height: 4),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -174,7 +213,9 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

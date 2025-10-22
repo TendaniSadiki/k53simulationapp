@@ -132,16 +132,9 @@ class _ExamResultsScreenState extends ConsumerState<ExamResultsScreen> {
 
   void _shareResults(BuildContext context, int score, int totalQuestions, double percentage) {
     final shareService = ShareService();
-    final message = 'I scored $score/$totalQuestions (${percentage.toStringAsFixed(1)}%) on my K53 mock exam! '
-                   'Download the app to practice for your learner\'s license.';
+    final passed = percentage >= 70;
     
-    final content = ShareContent(
-      title: 'K53 Exam Results',
-      message: message,
-      deepLink: 'https://k53app.com/download?utm_source=exam_results&utm_medium=whatsapp',
-    );
-    
-    shareService.shareViaWhatsApp(content);
+    shareService.shareExamResult(score, totalQuestions, passed);
   }
 
   @override
@@ -191,14 +184,22 @@ class _ExamResultsScreenState extends ConsumerState<ExamResultsScreen> {
             ),
             const SizedBox(height: 24),
             
-            // Result Message
-            Text(
-              resultMessage,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: resultColor,
-                fontWeight: FontWeight.bold,
+            // Result Message with more prominent display
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: hasPassed ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: resultColor, width: 2),
               ),
-              textAlign: TextAlign.center,
+              child: Text(
+                resultMessage,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: resultColor,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
             const SizedBox(height: 32),
             
@@ -234,28 +235,44 @@ class _ExamResultsScreenState extends ConsumerState<ExamResultsScreen> {
             
             // Actions
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton(
-                  onPressed: () {
-                    ref.read(examProvider.notifier).retryExam();
-                    context.go('/exam');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ref.read(examProvider.notifier).retryExam();
+                      context.go('/exam');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    child: const Text('Try Again'),
                   ),
-                  child: const Text('Try Again'),
                 ),
-                ElevatedButton(
-                  onPressed: () => context.go('/dashboard'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/exam/review'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    child: const Text('Review'),
                   ),
-                  child: const Text('Back to Dashboard'),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/dashboard'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[300],
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    child: const Text('Dashboard'),
+                  ),
                 ),
               ],
             ),

@@ -319,7 +319,7 @@ FROM (
 ) AS data(category, learner_code, question_text, options, correct_index, explanation, difficulty_level)
 WHERE NOT EXISTS (
   SELECT 1 FROM questions WHERE question_text = data.question_text
-));
+);
 
 -- Confirm the insertions
 SELECT 'Successfully inserted ' || COUNT(*) || ' Evolve Driving Academy questions' AS result FROM questions WHERE created_at > NOW() - INTERVAL '1 minute';
