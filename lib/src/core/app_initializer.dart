@@ -12,9 +12,6 @@ class AppInitializer {
   static Future<void> initialize() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize environment configuration first
-    await EnvironmentConfig.initialize();
-    
     // Validate offline configuration
     OfflineConfig.validate();
     
