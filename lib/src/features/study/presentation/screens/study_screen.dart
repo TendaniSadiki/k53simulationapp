@@ -79,11 +79,6 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
     );
   }
 
-  void _showExplanation() {
-    final notifier = ref.read(studyProvider.notifier);
-    notifier.showExplanation();
-  }
-
   void _previousQuestion() {
     final notifier = ref.read(studyProvider.notifier);
     final state = ref.read(studyProvider);
@@ -308,18 +303,12 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                 onPressed: state.isFirstQuestion ? null : _previousQuestion,
                 child: const Text('Previous'),
               ),
-              if (state.selectedAnswerIndex != null && !state.showExplanation)
-                ElevatedButton(
-                  onPressed: _showExplanation,
-                  child: const Text('Show Explanation'),
-                )
-              else
-                ElevatedButton(
-                  onPressed: state.showExplanation && !state.isLastQuestion
-                      ? _nextQuestion
-                      : null,
-                  child: const Text('Next'),
-                ),
+              ElevatedButton(
+                onPressed: state.showExplanation && !state.isLastQuestion
+                    ? _nextQuestion
+                    : null,
+                child: const Text('Next'),
+              ),
             ],
           ),
         ],
@@ -413,7 +402,9 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                 child: const Text('Previous'),
               ),
               ElevatedButton(
-                onPressed: !state.isLastQuestion ? _nextQuestion : null,
+                onPressed: state.showExplanation && !state.isLastQuestion
+                    ? _nextQuestion
+                    : null,
                 child: const Text('Next'),
               ),
             ],

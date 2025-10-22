@@ -1,10 +1,8 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:ui' as ui;
 import './config/environment_config.dart';
-import './config/offline_config.dart';
 import './services/supabase_service.dart';
-import './services/local_auth_service.dart';
-import './services/hybrid_question_service.dart';
 import './services/offline_database_service.dart';
 import './services/offline_data_preloader.dart';
 
@@ -12,48 +10,26 @@ class AppInitializer {
   static Future<void> initialize() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Validate offline configuration
-    OfflineConfig.validate();
-    
-    // Print configuration for debugging
-    if (EnvironmentConfig.isDevelopment) {
-      EnvironmentConfig.printConfig();
-      OfflineConfig.printConfig();
-    }
+    // Load environment variables
+    await EnvironmentConfig.initialize();
 
-    // Initialize offline database first (most critical)
+    // Initialize Supabase
+    await SupabaseService.initialize();
+
+    // Initialize offline database
     await OfflineDatabaseService.initialize();
 
-    // Initialize local authentication
-    await LocalAuthService.initialize();
-
-    // Initialize hybrid question service
-    await HybridQuestionService.initialize();
-
-    // Try to initialize Supabase, but don't fail if it doesn't work
-    try {
-      EnvironmentConfig.validate();
-      await SupabaseService.initialize();
-      print('✅ Supabase initialized successfully');
-    } catch (e) {
-      print('⚠️ Supabase initialization failed: $e');
-      print('🔄 Falling back to offline mode');
-    }
-
-    // Create default offline user if no user exists
-    final isAuthenticated = await LocalAuthService.isAuthenticated();
-    if (!isAuthenticated) {
-      await LocalAuthService.createDefaultOfflineUser();
-      print('✅ Default offline user created');
-    }
-
-    // Preload all questions for offline use
-    await OfflineDataPreloader.preloadQuestions();
-
-    // Start connectivity listener for optional auto-sync
+    // Start connectivity listener for auto-sync
     OfflineDatabaseService.startConnectivityListener();
 
-    print('✅ App initialization complete - Ready for offline use');
+    // Preload basic questions for offline use
+    await OfflineDataPreloader.preloadQuestions();
+
+    // Additional initialization can be added here:
+    // - Analytics
+    // - Crash reporting
+    // - Caching
+    // - etc.
   }
 
   static Future<void> preCacheAssets(BuildContext context) async {

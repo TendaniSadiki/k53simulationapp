@@ -6,7 +6,6 @@ import '../../../../core/models/session.dart' as session_models;
 import '../../../../core/services/database_service.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/session_persistence_service.dart';
-import '../../../../core/services/gamification_service.dart';
 
 final studyProvider = StateNotifierProvider<StudyProvider, StudyState>((ref) {
   return StudyProvider();
@@ -418,7 +417,7 @@ class StudyProvider extends StateNotifier<StudyState> {
 
     state = state.copyWith(
       selectedAnswerIndex: answerIndex,
-      showExplanation: true, // Show explanation immediately - card should flip
+      showExplanation: true,
       userAnswers: newUserAnswers,
       correctAnswers: newCorrectAnswers,
       totalAnswered: newTotalAnswered,
@@ -428,61 +427,6 @@ class StudyProvider extends StateNotifier<StudyState> {
     await DatabaseService().updateQuestionStats(
       questionId: questionId,
       isCorrect: isCorrect,
-    );
-
-    // Track gamification points for correct answers
-    if (isCorrect) {
-      // Award regular points
-      await GamificationService().awardGamingPoints(
-        points: 1,
-        reason: 'Correct answer in study mode',
-        metadata: {
-          'question_id': questionId,
-          'category': currentQuestion.category,
-          'session_type': 'study',
-        },
-      );
-
-      // Award daily points
-      await GamificationService().trackOfflineActivity(
-        activityType: 'daily_points',
-        value: 1,
-        metadata: {
-          'question_id': questionId,
-          'category': currentQuestion.category,
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-          'is_daily': true,
-        },
-      );
-
-      // Award weekly points
-      await GamificationService().trackOfflineActivity(
-        activityType: 'weekly_points',
-        value: 1,
-        metadata: {
-          'question_id': questionId,
-          'category': currentQuestion.category,
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-          'is_weekly': true,
-        },
-      );
-    }
-
-    // Track question answer for gamification
-    await GamificationService().trackQuestionAnswer(
-      sessionId: state.currentSession?.id ?? 'study_session',
-      questionId: questionId,
-      chosenIndex: answerIndex,
-      isCorrect: isCorrect,
-      elapsedMs: 0, // TODO: Implement timing
-      hintsUsed: 0,
-    );
-  }
-
-  // Show explanation for current question
-  void showExplanation() {
-    state = state.copyWith(
-      showExplanation: true,
     );
   }
 

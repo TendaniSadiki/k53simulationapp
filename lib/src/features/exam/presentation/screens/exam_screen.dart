@@ -432,7 +432,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
                   child: FlashcardWidget(
                     frontContent: _buildExamFrontContent(state),
                     backContent: _buildExamBackContent(state),
-                    enableDoubleTap: false, // Disable double-tap in exam mode
+                    enableDoubleTap: true,
                     mode: FlashcardMode.exam,
                     startFlipped: state.showExplanation,
                     onFlip: () {
