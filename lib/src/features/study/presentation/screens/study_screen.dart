@@ -252,7 +252,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           // Question text
           Text(
             question.questionText,
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -280,7 +283,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                       : () async => await _selectAnswer(index),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: buttonColor,
-                    foregroundColor: buttonColor != null ? Colors.white : null,
+                    foregroundColor: buttonColor != null ? Colors.white : Theme.of(context).colorScheme.onSurface,
                     minimumSize: const Size(double.infinity, 50),
                   ),
                   child: Text(
@@ -288,6 +291,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: buttonColor != null ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               );
@@ -325,7 +332,10 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           // Question text (repeated for context)
           Text(
             question.questionText,
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -334,19 +344,19 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
+              color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.shade300),
+              border: Border.all(color: Theme.of(context).colorScheme.primary),
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Correct Answer: ${String.fromCharCode(65 + question.correctIndex)}',
                     style: TextStyle(
-                      color: Colors.green.shade700,
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -358,7 +368,7 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           
           // Explanation
           Card(
-            color: Colors.blue[50],
+            color: Theme.of(context).colorScheme.secondaryContainer,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -367,13 +377,16 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
                   Text(
                     'Explanation:',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.blue[800],
+                      color: Theme.of(context).colorScheme.secondary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     question.explanation,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
@@ -387,8 +400,8 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
             icon: const Icon(Icons.flag, size: 16),
             label: const Text('Report Question'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.orange,
-              side: const BorderSide(color: Colors.orange),
+              foregroundColor: Theme.of(context).colorScheme.error,
+              side: BorderSide(color: Theme.of(context).colorScheme.error),
             ),
           ),
           
@@ -485,17 +498,17 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.school, size: 64, color: Colors.blue),
+              Icon(Icons.school, size: 64, color: Colors.blue),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 'Start Studying',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Choose your study preferences to begin',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 32),
               SizedBox(
@@ -570,19 +583,19 @@ class _StudyScreenState extends ConsumerState<StudyScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.blue[50],
+              color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.blue),
+              border: Border.all(color: Theme.of(context).colorScheme.primary),
             ),
             child: Row(
               children: [
-                const Icon(Icons.emoji_events, size: 16, color: Colors.blue),
+                Icon(Icons.emoji_events, size: 16, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 4),
                 Text(
                   '$_currentSessionPoints pts',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],

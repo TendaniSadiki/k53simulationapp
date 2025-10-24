@@ -28,10 +28,6 @@ class SupabaseService {
   // Stream for auth state changes
   static Stream<AuthState> get authStateChanges => auth.onAuthStateChange;
 
-  // Sign out method
-  static Future<void> signOut() async {
-    await auth.signOut();
-  }
 
   // Error handling wrapper for Supabase operations
   static Future<T> executeWithErrorHandling<T>(

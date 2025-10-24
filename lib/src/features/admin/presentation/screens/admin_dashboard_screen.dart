@@ -1,8 +1,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:k53app/src/core/services/admin_qa_service.dart';
 import 'package:k53app/src/core/services/supabase_service.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -42,9 +44,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               icon: const Icon(Icons.logout, size: 20),
               tooltip: 'Logout',
               onPressed: () {
-                final navigator = Navigator.of(context);
-                SupabaseService.signOut().then((_) {
-                  navigator.pushNamedAndRemoveUntil('/auth/login', (route) => false);
+                final authNotifier = ref.read(authProvider.notifier);
+                authNotifier.signOut().then((_) {
+                  context.go('/auth/login');
                 });
               },
               style: IconButton.styleFrom(

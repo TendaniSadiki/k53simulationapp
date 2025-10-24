@@ -209,9 +209,11 @@ class AuthProvider extends StateNotifier<AuthState> {
   // Sign out
   Future<void> signOut() async {
     try {
+      print('🔄 AuthProvider.signOut() called - starting sign out process');
       state = state.copyWith(isLoading: true);
 
       await SupabaseService.client.auth.signOut();
+      print('✅ Supabase sign out completed');
 
       state = state.copyWith(
         user: null,
@@ -220,7 +222,10 @@ class AuthProvider extends StateNotifier<AuthState> {
         isLoading: false,
         status: AuthStatus.unauthenticated,
       );
+      print('✅ Auth state updated: isAuthenticated=false, status=unauthenticated');
+      print('✅ Sign out completed successfully');
     } catch (e) {
+      print('❌ Sign out failed: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Sign out failed: $e',

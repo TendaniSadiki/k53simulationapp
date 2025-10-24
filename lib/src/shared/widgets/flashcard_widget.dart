@@ -122,10 +122,10 @@ class _FlashcardWidgetState extends State<FlashcardWidget> {
     return Container(
       key: const ValueKey('front'),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade300,
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -223,26 +223,26 @@ class _FlashcardWidgetState extends State<FlashcardWidget> {
   Color _getBackColor() {
     switch (widget.mode) {
       case FlashcardMode.study:
-        return Colors.blue.shade50;
+        return Theme.of(context).colorScheme.primaryContainer;
       case FlashcardMode.exam:
-        return Colors.orange.shade50;
+        return Theme.of(context).colorScheme.secondaryContainer;
       case FlashcardMode.review:
-        return Colors.green.shade50;
+        return Theme.of(context).colorScheme.tertiaryContainer;
       case FlashcardMode.dashboard:
-        return Colors.grey.shade50;
+        return Theme.of(context).colorScheme.surfaceVariant;
     }
   }
 
   Color _getBorderColor() {
     switch (widget.mode) {
       case FlashcardMode.study:
-        return Colors.blue.shade300;
+        return Theme.of(context).colorScheme.primary;
       case FlashcardMode.exam:
-        return Colors.orange.shade300;
+        return Theme.of(context).colorScheme.secondary;
       case FlashcardMode.review:
-        return Colors.green.shade300;
+        return Theme.of(context).colorScheme.tertiary;
       case FlashcardMode.dashboard:
-        return Colors.grey.shade300;
+        return Theme.of(context).colorScheme.outline;
     }
   }
 

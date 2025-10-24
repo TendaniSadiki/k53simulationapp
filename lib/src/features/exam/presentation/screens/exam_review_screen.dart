@@ -87,7 +87,10 @@ class _ExamReviewScreenState extends ConsumerState<ExamReviewScreen> {
             // Question text
             Text(
               question.questionText,
-              style: Theme.of(context).textTheme.bodyLarge,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -104,12 +107,12 @@ class _ExamReviewScreenState extends ConsumerState<ExamReviewScreen> {
                 IconData? icon;
 
                 if (isCorrectOption) {
-                  backgroundColor = Colors.green.withOpacity(0.1);
-                  textColor = Colors.green;
+                  backgroundColor = Theme.of(context).colorScheme.primaryContainer;
+                  textColor = Theme.of(context).colorScheme.primary;
                   icon = Icons.check_circle;
                 } else if (isSelected && !isCorrectOption) {
-                  backgroundColor = Colors.red.withOpacity(0.1);
-                  textColor = Colors.red;
+                  backgroundColor = Theme.of(context).colorScheme.errorContainer;
+                  textColor = Theme.of(context).colorScheme.error;
                   icon = Icons.cancel;
                 }
 
@@ -175,14 +178,15 @@ class _ExamReviewScreenState extends ConsumerState<ExamReviewScreen> {
                     'Explanation:',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.grey[700],
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     question.explanation,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurface,
+                          height: 1.4,
                         ),
                   ),
                 ],
@@ -253,7 +257,8 @@ class _ExamReviewScreenState extends ConsumerState<ExamReviewScreen> {
         Text(
           title,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
               ),
         ),
         const SizedBox(height: 4),

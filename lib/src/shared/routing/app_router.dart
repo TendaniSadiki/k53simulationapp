@@ -24,9 +24,44 @@ import '../../core/services/supabase_service.dart';
 class AppRouter {
   static GoRouter router(WidgetRef ref) {
     return GoRouter(
+      errorBuilder: (context, state) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Page Not Found'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                'Page Not Found',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The requested page could not be found.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => context.go('/auth/login'),
+                child: const Text('Go to Login'),
+              ),
+            ],
+          ),
+        ),
+      ),
       redirect: (context, state) async {
         final authState = ref.read(authProvider);
-        final isAuthenticated = authState.session != null;
+        final isAuthenticated = authState.isAuthenticated;
 
         final isGoingToAuth = state.matchedLocation.startsWith('/auth');
         final isGoingToAdmin = state.matchedLocation.startsWith('/admin');

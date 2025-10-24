@@ -484,7 +484,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
         children: [
           Text(
             state.currentQuestion!.questionText,
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -527,7 +530,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
                       : () async => ref.read(examProvider.notifier).selectAnswer(index),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: buttonColor,
-                    foregroundColor: buttonColor != null ? Colors.white : null,
+                    foregroundColor: buttonColor != null ? Colors.white : Theme.of(context).colorScheme.onSurface,
                     minimumSize: const Size(double.infinity, 60),
                   ),
                   child: Text(
@@ -535,6 +538,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: buttonColor != null ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               );
@@ -554,7 +561,10 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
           // Question text (repeated for context)
           Text(
             state.currentQuestion!.questionText,
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -563,19 +573,19 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
+              color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.shade300),
+              border: Border.all(color: Theme.of(context).colorScheme.primary),
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Correct Answer: ${String.fromCharCode(65 + state.currentQuestion!.correctIndex)}',
                     style: TextStyle(
-                      color: Colors.green.shade700,
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -587,7 +597,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
           
           // Explanation
           Card(
-            color: Colors.blue[50],
+            color: Theme.of(context).colorScheme.secondaryContainer,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -596,13 +606,16 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
                   Text(
                     'Explanation:',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.blue[800],
+                      color: Theme.of(context).colorScheme.secondary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     state.currentQuestion!.explanation,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
@@ -648,7 +661,7 @@ class _ExamScreenState extends ConsumerState<ExamScreen> with WidgetsBindingObse
               Text(
                 'Select options for customized exam',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),

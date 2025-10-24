@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:k53app/src/core/services/supabase_service.dart';
+import 'package:k53app/src/features/auth/presentation/providers/auth_provider.dart';
 
 class AdminLoginScreen extends ConsumerStatefulWidget {
   const AdminLoginScreen({super.key});
@@ -66,7 +67,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
             }
           } else {
             print('Access denied - user role: $role'); // Debug logging
-            await SupabaseService.auth.signOut();
+            final authNotifier = ref.read(authProvider.notifier);
+            await authNotifier.signOut();
             if (mounted) {
               setState(() {
                 _errorMessage = 'Access denied. Admin privileges required. User role: $role';
@@ -75,7 +77,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
           }
         } catch (e) {
           print('Error checking user role: $e'); // Debug logging
-          await SupabaseService.auth.signOut();
+          final authNotifier = ref.read(authProvider.notifier);
+          await authNotifier.signOut();
           if (mounted) {
             setState(() {
               _errorMessage = 'Error checking admin privileges. Please contact support.';
